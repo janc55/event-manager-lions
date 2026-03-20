@@ -1,0 +1,43 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+.yarn/*
+
+# testing
+coverage
+
+# next.js
+.next/
+out/
+
+# production
+build/
+dist/
+
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+*.log
+error_capture.log
+log.txt
+server_output.log
+
+# env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# uploads
+uploads/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# pnpm
+pnpm-debug.log*
+.pnpm-debug.log*

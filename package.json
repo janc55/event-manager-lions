@@ -1,0 +1,17 @@
+{
+  "name": "event-manager",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.6.5",
+  "description": "Sistema de gestion de la 75 Convencion Nacional del Club de Leones Bolivia",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev:api": "pnpm --filter api start:dev",
+    "dev:web": "pnpm --filter web dev",
+    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm --filter web build",
+    "migration:run": "pnpm --filter api migration:run",
+    "migration:revert": "pnpm --filter api migration:revert",
+    "seed:admin": "pnpm --filter api seed:admin"
+  }
+}
