@@ -17,19 +17,22 @@ async function bootstrap() {
   );
   const origins = configService.get<string>('CORS_ORIGIN', '')
     .split(',')
-    .map(o => o.trim())
+    .map(o => o.trim().replace(/\/$/, '')) // Remove trailing slashes
     .filter(o => o);
 
-  console.log('CORS Whitelist:', origins);
+  console.log('CORS Whitelist (normalized):', origins);
 
   app.enableCors({
     origin: (origin, callback) => {
-      console.log('Incoming Request Origin:', origin);
-      if (!origin || origins.length === 0 || origins.includes(origin) || origins.includes('*')) {
+      console.log('Incoming Request Origin (raw):', origin);
+
+      const normalizedOrigin = origin ? origin.replace(/\/$/, '') : '';
+
+      if (!origin || origins.length === 0 || origins.includes(normalizedOrigin) || origins.includes('*')) {
         callback(null, true);
       } else {
-        console.error('CORS Blocked for:', origin);
-        callback(new Error('Bloqueado por CORS'));
+        console.error('CORS Blocked for:', origin, 'Expected one of:', origins);
+        callback(new Error(`Bloqueado por CORS. Origen: ${origin}`));
       }
     },
     credentials: true,
