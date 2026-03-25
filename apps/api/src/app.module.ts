@@ -14,6 +14,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { UsersModule } from './modules/users/users.module';
 import { MediaModule } from './modules/media/media.module';
+import { RegistrationModule } from './modules/registration/registration.module';
 import { HealthController } from './modules/health/health.controller';
 
 @Module({
@@ -55,6 +56,7 @@ import { HealthController } from './modules/health/health.controller';
     ReportsModule,
     AuditModule,
     MediaModule,
+    RegistrationModule,
   ],
   controllers: [HealthController],
 })

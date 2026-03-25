@@ -37,7 +37,8 @@ async function bootstrap() {
     },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type,Accept,Authorization',
+    allowedHeaders: 'Content-Type,Accept,Authorization,x-api-key',
+    optionsSuccessStatus: 204,
   });
   app.useGlobalPipes(
     new ValidationPipe({
