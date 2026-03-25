@@ -96,6 +96,13 @@ export const api = {
     if (!res.ok) throw new ApiError('Error descargando PDF', res.status);
     return res.blob();
   },
+
+  getFileUrl: (path?: string | null) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const baseUrl = API_BASE.replace('/api', '');
+    return `${baseUrl}${path}`;
+  },
 };
 
 export { ApiError };

@@ -6,7 +6,7 @@ import { DataSource } from 'typeorm';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { User } from '../../modules/users/entities/user.entity';
 
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+dotenv.config({ path: path.join(__dirname, '..', '..', '..', '..', '..', '.env') });
 
 async function seedAdmin() {
   const dataSource = new DataSource({

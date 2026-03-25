@@ -64,6 +64,8 @@ export interface Participant {
   notes?: string | null;
   qrCode: string;
   status: ParticipantStatus;
+  lionNumber?: string | null;
+  photoUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -169,6 +171,8 @@ export interface CreateParticipantDto {
   specialRequirements?: string;
   notes?: string;
   status?: ParticipantStatus;
+  lionNumber?: string;
+  photoUrl?: string;
 }
 
 export interface CreatePaymentDto {

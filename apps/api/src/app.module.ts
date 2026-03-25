@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { resolve } from 'path';
+import { join, resolve } from 'path';
 import { envValidationSchema } from './config/env.validation';
 import { ActivitiesModule } from './modules/activities/activities.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -12,6 +13,7 @@ import { ParticipantsModule } from './modules/participants/participants.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { UsersModule } from './modules/users/users.module';
+import { MediaModule } from './modules/media/media.module';
 
 @Module({
   imports: [
@@ -19,6 +21,10 @@ import { UsersModule } from './modules/users/users.module';
       isGlobal: true,
       envFilePath: resolve(__dirname, '..', '..', '..', '.env'),
       validationSchema: envValidationSchema,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
     }),
     ThrottlerModule.forRoot([
       {
@@ -47,6 +53,7 @@ import { UsersModule } from './modules/users/users.module';
     OperationsModule,
     ReportsModule,
     AuditModule,
+    MediaModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

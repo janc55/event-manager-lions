@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
 import * as path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '..', '..', '..', '.env') });
 
 export default new DataSource({
   type: 'postgres',
@@ -12,7 +12,7 @@ export default new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
-  entities: ['src/**/*.entity.ts'],
-  migrations: ['src/database/migrations/*.ts'],
+  entities: [path.join(__dirname, '..', '**', '*.entity.ts')],
+  migrations: [path.join(__dirname, 'migrations', '*.ts')],
   synchronize: false,
 });

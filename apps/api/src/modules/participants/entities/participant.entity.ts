@@ -53,6 +53,12 @@ export class Participant extends AppBaseEntity {
   @Column({ name: 'qr_code', length: 120 })
   qrCode: string;
 
+  @Column({ name: 'lion_number', type: 'varchar', length: 50, nullable: true })
+  lionNumber: string | null;
+
+  @Column({ name: 'photo_url', type: 'text', nullable: true })
+  photoUrl: string | null;
+
   @Column({
     type: 'enum',
     enum: ParticipantStatus,

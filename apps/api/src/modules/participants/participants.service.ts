@@ -8,6 +8,8 @@ import { randomUUID } from 'crypto';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import * as QRCode from 'qrcode';
 import { Repository } from 'typeorm';
+import * as fs from 'fs/promises';
+import { join } from 'path';
 import { CreateParticipantDto } from './dto/create-participant.dto';
 import { UpdateParticipantDto } from './dto/update-participant.dto';
 import { Participant } from './entities/participant.entity';
@@ -17,7 +19,7 @@ export class ParticipantsService {
   constructor(
     @InjectRepository(Participant)
     private readonly participantsRepository: Repository<Participant>,
-  ) {}
+  ) { }
 
   async create(createParticipantDto: CreateParticipantDto): Promise<Participant> {
     const email = createParticipantDto.email.toLowerCase();
@@ -112,6 +114,36 @@ export class ParticipantsService {
       color: rgb(0.97, 0.96, 0.92),
     });
 
+    // Draw Participant Photo if exists
+    if (participant.photoUrl) {
+      try {
+        let imageBuffer: ArrayBuffer | Buffer;
+        if (participant.photoUrl.startsWith('/uploads/')) {
+          const filePath = join(__dirname, '..', '..', '..', 'uploads', 'photos', participant.photoUrl.replace('/uploads/photos/', '').replace('/uploads/', ''));
+          imageBuffer = await fs.readFile(filePath);
+        } else {
+          const response = await fetch(participant.photoUrl);
+          imageBuffer = await response.arrayBuffer();
+        }
+
+        let participantImage;
+        if (participant.photoUrl.toLowerCase().endsWith('.png')) {
+          participantImage = await pdfDoc.embedPng(imageBuffer);
+        } else {
+          participantImage = await pdfDoc.embedJpg(imageBuffer);
+        }
+
+        page.drawImage(participantImage, {
+          x: 71.5,
+          y: 200,
+          width: 100,
+          height: 100,
+        });
+      } catch (error) {
+        console.error('Error embedding participant photo:', error);
+      }
+    }
+
     page.drawText('75 Convencion Nacional', {
       x: 24,
       y: 360,
@@ -128,52 +160,54 @@ export class ParticipantsService {
       color: rgb(0.28, 0.28, 0.28),
     });
 
+    const nameY = participant.photoUrl ? 180 : 300;
     page.drawText(participant.badgeName || `${participant.firstName} ${participant.lastName}`, {
       x: 24,
-      y: 300,
+      y: nameY,
       size: 18,
       font: boldFont,
       color: rgb(0.1, 0.1, 0.1),
       maxWidth: 195,
     });
 
+    const detailsStartY = participant.photoUrl ? 155 : 270;
     page.drawText(`Club: ${participant.club || 'No especificado'}`, {
       x: 24,
-      y: 270,
+      y: detailsStartY,
       size: 10,
       font,
     });
     page.drawText(`Distrito: ${participant.district || 'No especificado'}`, {
       x: 24,
-      y: 254,
+      y: detailsStartY - 16,
       size: 10,
       font,
     });
     page.drawText(`Pais: ${participant.country}`, {
       x: 24,
-      y: 238,
+      y: detailsStartY - 32,
       size: 10,
       font,
     });
     page.drawText(`Rol: ${participant.roleTitle || participant.participantType}`, {
       x: 24,
-      y: 222,
+      y: detailsStartY - 48,
       size: 10,
       font,
       maxWidth: 160,
     });
 
     page.drawImage(qrImage, {
-      x: 57,
-      y: 55,
-      width: 128,
-      height: 128,
+      x: 160,
+      y: 20,
+      width: 60,
+      height: 60,
     });
 
     page.drawText(participant.registrationCode, {
-      x: 58,
-      y: 35,
-      size: 10,
+      x: 24,
+      y: 20,
+      size: 8,
       font,
       color: rgb(0.3, 0.3, 0.3),
     });

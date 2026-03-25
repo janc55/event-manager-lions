@@ -75,4 +75,15 @@ export class CreateParticipantDto {
   @IsOptional()
   @IsEnum(ParticipantStatus)
   status?: ParticipantStatus;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  lionNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  photoUrl?: string;
 }

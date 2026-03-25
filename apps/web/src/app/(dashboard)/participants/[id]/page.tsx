@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import { ArrowLeft, Download, QrCode, RefreshCw, Pencil, Save, X } from 'lucide-react';
+import { ArrowLeft, Download, QrCode, RefreshCw, Pencil, Save, X, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import type { Participant, Payment, CreateParticipantDto } from '@/types';
 import { formatDate, formatMoney } from '@/lib/utils';
@@ -33,6 +33,7 @@ export default function ParticipantDetailPage() {
   const [form, setForm] = useState<Partial<CreateParticipantDto>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function ParticipantDetailPage() {
         documentNumber: p.documentNumber || '', country: p.country, district: p.district || '',
         club: p.club || '', roleTitle: p.roleTitle || '', email: p.email, phone: p.phone || '',
         participantType: p.participantType, specialRequirements: p.specialRequirements || '',
-        notes: p.notes || '',
+        notes: p.notes || '', lionNumber: p.lionNumber || '', photoUrl: p.photoUrl || '',
       });
     }).catch(console.error).finally(() => setLoading(false));
   }, [id]);
@@ -76,6 +77,32 @@ export default function ParticipantDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al regenerar QR');
     }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError('La imagen no debe superar los 2MB');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+
+    try {
+      const res = await api.upload<{ url: string }>('/media/upload', file);
+      setForm((prev) => ({ ...prev, photoUrl: res.url }));
+    } catch (err) {
+      setError('Error al subir imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removePhoto = () => {
+    setForm((prev) => ({ ...prev, photoUrl: '' }));
   };
 
   const handleDownloadBadge = async () => {
@@ -122,6 +149,11 @@ export default function ParticipantDetailPage() {
             <h1 className="text-2xl font-bold text-white">{participant.firstName} {participant.lastName}</h1>
             <div className="flex items-center gap-3 mt-1">
               <span className="font-mono text-xs" style={{ color: 'var(--color-text-muted)' }}>{participant.registrationCode}</span>
+              {participant.lionNumber && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-lg" style={{ color: 'var(--color-primary-light)', background: 'rgba(218, 165, 32, 0.1)' }}>
+                  🦁 {participant.lionNumber}
+                </span>
+              )}
               <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium" style={{ color: st.color, background: st.bg }}>{st.label}</span>
             </div>
           </div>
@@ -170,7 +202,14 @@ export default function ParticipantDetailPage() {
         {/* Main info */}
         <div className="lg:col-span-2 space-y-6">
           <div className="rounded-2xl p-6" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
-            <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--color-primary-light)' }}>Datos personales</h2>
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--color-primary-light)' }}>Datos personales</h2>
+              {participant.photoUrl && !editing && (
+                <div className="w-16 h-16 rounded-xl overflow-hidden border-2" style={{ borderColor: 'var(--color-border)' }}>
+                  <img src={api.getFileUrl(participant.photoUrl)} alt="Foto" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
             {editing ? (
               <div className="grid grid-cols-2 gap-4">
                 {[
@@ -184,6 +223,7 @@ export default function ParticipantDetailPage() {
                   { label: 'Distrito', key: 'district' },
                   { label: 'Club', key: 'club' },
                   { label: 'Cargo', key: 'roleTitle' },
+                  { label: 'Número de León', key: 'lionNumber' },
                 ].map((f) => (
                   <div key={f.key}>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-muted)' }}>{f.label}</label>
@@ -191,6 +231,32 @@ export default function ParticipantDetailPage() {
                       className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none" style={inputStyle} />
                   </div>
                 ))}
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Foto del participante</label>
+                  <div className="flex items-center gap-4">
+                    {form.photoUrl ? (
+                      <div className="relative w-24 h-24 rounded-xl overflow-hidden border-2" style={{ borderColor: 'var(--color-border)' }}>
+                        <img src={api.getFileUrl(form.photoUrl)} alt="Preview" className="w-full h-full object-cover" />
+                        <button type="button" onClick={removePhoto}
+                          className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white hover:bg-red-600 transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-24 h-24 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:bg-[var(--color-bg-elevated)] transition-colors"
+                        style={{ borderColor: 'var(--color-border)' }}>
+                        <ImageIcon className="w-8 h-8 mb-1" style={{ color: 'var(--color-text-muted)' }} />
+                        <span className="text-[10px] text-center" style={{ color: 'var(--color-text-muted)' }}>Subir foto</span>
+                        <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} disabled={uploading} />
+                      </label>
+                    )}
+                    <div className="text-[10px] space-y-1" style={{ color: 'var(--color-text-muted)' }}>
+                      <p>Máximo 2MB</p>
+                      <p>Formatos: JPG, PNG</p>
+                      {uploading && <p className="text-[var(--color-primary-light)] animate-pulse font-medium">Subiendo...</p>}
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-y-4 gap-x-8">
@@ -204,6 +270,7 @@ export default function ParticipantDetailPage() {
                   { label: 'Cargo', value: participant.roleTitle || '—' },
                   { label: 'Tipo', value: participant.participantType },
                   { label: 'Credencial', value: participant.badgeName || participant.firstName + ' ' + participant.lastName },
+                  { label: 'Número de León', value: participant.lionNumber || '—' },
                   { label: 'Registro', value: formatDate(participant.createdAt) },
                 ].map((f) => (
                   <div key={f.label}>

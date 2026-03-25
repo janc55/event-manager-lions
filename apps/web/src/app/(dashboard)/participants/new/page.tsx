@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Upload, X, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import type { CreateParticipantDto } from '@/types';
 
@@ -13,10 +13,46 @@ export default function NewParticipantPage() {
   const [error, setError] = useState('');
   const [form, setForm] = useState<CreateParticipantDto>({
     firstName: '', lastName: '', country: '', email: '', participantType: 'delegado',
+    lionNumber: '', photoUrl: '',
   });
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const set = (field: keyof CreateParticipantDto, value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError('La imagen no debe superar los 2MB');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+
+    // Preview
+    const reader = new FileReader();
+    reader.onloadend = () => setPreview(reader.result as string);
+    reader.readAsDataURL(file);
+
+    try {
+      const res = await api.upload<{ url: string }>('/media/upload', file);
+      set('photoUrl', res.url);
+    } catch (err) {
+      setError('Error al subir imagen');
+      setPreview(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removePhoto = () => {
+    set('photoUrl', '');
+    setPreview(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +128,12 @@ export default function NewParticipantPage() {
               <input value={form.phone || ''} onChange={(e) => set('phone', e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none" style={inputStyle} />
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>ID/Número de León</label>
+              <input value={form.lionNumber || ''} onChange={(e) => set('lionNumber', e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none" style={inputStyle}
+                placeholder="Número de membresía" />
+            </div>
           </div>
 
           <p className="text-sm font-semibold pt-4" style={{ color: 'var(--color-primary-light)' }}>Datos de la organización</p>
@@ -136,6 +178,32 @@ export default function NewParticipantPage() {
               <textarea value={form.specialRequirements || ''} onChange={(e) => set('specialRequirements', e.target.value)}
                 rows={2} className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none resize-none" style={inputStyle}
                 placeholder="Dieta especial, accesibilidad, etc." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Foto del participante</label>
+              <div className="flex items-center gap-4">
+                {preview || form.photoUrl ? (
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden border-2" style={{ borderColor: 'var(--color-border)' }}>
+                    <img src={preview || api.getFileUrl(form.photoUrl)} alt="Preview" className="w-full h-full object-cover" />
+                    <button type="button" onClick={removePhoto}
+                      className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white hover:bg-red-600 transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-24 h-24 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:bg-[var(--color-bg-elevated)] transition-colors"
+                    style={{ borderColor: 'var(--color-border)' }}>
+                    <ImageIcon className="w-8 h-8 mb-1" style={{ color: 'var(--color-text-muted)' }} />
+                    <span className="text-[10px] text-center" style={{ color: 'var(--color-text-muted)' }}>Subir foto</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} disabled={uploading} />
+                  </label>
+                )}
+                <div className="text-xs space-y-1" style={{ color: 'var(--color-text-muted)' }}>
+                  <p>Máximo 2MB</p>
+                  <p>Formatos: JPG, PNG</p>
+                  {uploading && <p className="text-[var(--color-primary-light)] animate-pulse font-medium">Subiendo...</p>}
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Observaciones</label>
