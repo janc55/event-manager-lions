@@ -14,6 +14,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { UsersModule } from './modules/users/users.module';
 import { MediaModule } from './modules/media/media.module';
+import { HealthController } from './modules/health/health.controller';
 
 @Module({
   imports: [
@@ -55,5 +56,6 @@ import { MediaModule } from './modules/media/media.module';
     AuditModule,
     MediaModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule { }

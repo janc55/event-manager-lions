@@ -15,16 +15,20 @@ async function bootstrap() {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
-  const origins = configService.get<string>('CORS_ORIGIN', '').split(',').filter(o => o);
+  const origins = configService.get<string>('CORS_ORIGIN', '')
+    .split(',')
+    .map(o => o.trim())
+    .filter(o => o);
+
+  console.log('CORS Whitelist:', origins);
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
-
-      if (origins.length === 0 || origins.includes(origin) || origins.includes('*')) {
+      console.log('Incoming Request Origin:', origin);
+      if (!origin || origins.length === 0 || origins.includes(origin) || origins.includes('*')) {
         callback(null, true);
       } else {
+        console.error('CORS Blocked for:', origin);
         callback(new Error('Bloqueado por CORS'));
       }
     },
