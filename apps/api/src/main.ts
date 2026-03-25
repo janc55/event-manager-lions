@@ -15,9 +15,22 @@ async function bootstrap() {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
+  const origins = configService.get<string>('CORS_ORIGIN', '').split(',').filter(o => o);
+
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGIN', '*').split(','),
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (origins.length === 0 || origins.includes(origin) || origins.includes('*')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Bloqueado por CORS'));
+      }
+    },
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Accept,Authorization',
   });
   app.useGlobalPipes(
     new ValidationPipe({
