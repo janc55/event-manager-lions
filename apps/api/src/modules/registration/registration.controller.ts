@@ -37,7 +37,8 @@ export class RegistrationController {
                 storage: diskStorage({
                     destination: (req, file, cb) => {
                         const folder = file.fieldname === 'photo' ? 'photos' : 'vouchers';
-                        const dest = join(__dirname, '..', '..', '..', 'uploads', folder);
+                        const dest = join(process.cwd(), 'uploads', folder);
+                        console.log(`Multer: subiendo ${file.fieldname} a ${dest}`);
                         cb(null, dest);
                     },
                     filename: (req, file, cb) => {

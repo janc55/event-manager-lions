@@ -25,6 +25,7 @@ export class RegistrationService {
         photoFile?: Express.Multer.File,
         voucherFile?: Express.Multer.File,
     ) {
+        console.log('Iniciando proceso de registro para:', registerDto.email);
         const queryRunner = this.dataSource.createQueryRunner();
 
         await queryRunner.connect();
@@ -34,6 +35,7 @@ export class RegistrationService {
             const email = registerDto.email.toLowerCase();
 
             // Check for duplicates
+            console.log('Verificando duplicados...');
             const existing = await queryRunner.manager.findOne(Participant, {
                 where: [
                     { email },
@@ -42,14 +44,20 @@ export class RegistrationService {
             });
 
             if (existing) {
+                console.log('Participante duplicado hallado.');
                 throw new ConflictException('Participante ya registrado con este email o documento.');
             }
 
             // 1. Create Participant
+            console.log('Creando entidad Participante...');
+            const badgeName = registerDto.badgeName?.trim() 
+                ? registerDto.badgeName 
+                : `${registerDto.firstName} ${registerDto.lastName}`;
+
             const participant = queryRunner.manager.create(Participant, {
                 firstName: registerDto.firstName,
                 lastName: registerDto.lastName,
-                badgeName: registerDto.badgeName,
+                badgeName,
                 documentNumber: registerDto.documentNumber,
                 country: registerDto.country,
                 district: registerDto.district,
@@ -67,9 +75,11 @@ export class RegistrationService {
                 photoUrl: photoFile ? `/uploads/photos/${photoFile.filename}` : null,
             });
 
+            console.log('Guardando Participante...');
             const savedParticipant = await queryRunner.manager.save(Participant, participant);
 
             // 2. Create Payment
+            console.log('Creando entidad Pago...');
             const payment = queryRunner.manager.create(Payment, {
                 participantId: savedParticipant.id,
                 concept: `Registro - ${savedParticipant.participantType}`,
@@ -81,15 +91,22 @@ export class RegistrationService {
                 notes: registerDto.notes || 'Registro inicial vía formulario web',
             });
 
+            console.log('Guardando Pago...');
             await queryRunner.manager.save(Payment, payment);
 
             await queryRunner.commitTransaction();
+            console.log('Transacción completada con éxito.');
 
             return savedParticipant;
         } catch (err: any) {
+            console.error('ERROR EN REGISTRO:', err);
             await queryRunner.rollbackTransaction();
             if (err instanceof ConflictException) throw err;
-            throw new InternalServerErrorException('Error en el proceso de registro: ' + (err.message || 'Error desconocido'));
+            throw new InternalServerErrorException({
+                message: 'Error en el proceso de registro',
+                error: err.message,
+                detail: err.detail || 'Sin detalles adicionales'
+            });
         } finally {
             await queryRunner.release();
         }
