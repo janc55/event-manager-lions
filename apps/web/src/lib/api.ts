@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const ROOT_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/api$/, '').replace(/\/$/, '');
+const API_BASE = `${ROOT_URL}/api`;
 
 class ApiError extends Error {
   status: number;
@@ -100,8 +101,7 @@ export const api = {
   getFileUrl: (path?: string | null) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
-    const baseUrl = API_BASE.replace('/api', '');
-    return `${baseUrl}${path}`;
+    return `${ROOT_URL}${path}`;
   },
 };
 
