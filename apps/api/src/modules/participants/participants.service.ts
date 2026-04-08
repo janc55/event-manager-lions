@@ -119,7 +119,7 @@ export class ParticipantsService {
       try {
         let imageBuffer: ArrayBuffer | Buffer;
         if (participant.photoUrl.startsWith('/uploads/')) {
-          const filePath = join(__dirname, '..', '..', '..', 'uploads', 'photos', participant.photoUrl.replace('/uploads/photos/', '').replace('/uploads/', ''));
+          const filePath = join(process.cwd(), 'uploads', 'photos', participant.photoUrl.replace('/uploads/photos/', '').replace('/uploads/', ''));
           imageBuffer = await fs.readFile(filePath);
         } else {
           const response = await fetch(participant.photoUrl);

@@ -24,9 +24,17 @@ import { HealthController } from './modules/health/health.controller';
       envFilePath: resolve(__dirname, '..', '..', '..', '.env'),
       validationSchema: envValidationSchema,
     }),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
-      serveRoot: '/uploads',
+    ServeStaticModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const uploadDir = configService.get<string>('UPLOAD_DIR', 'uploads');
+        return [
+          {
+            rootPath: join(process.cwd(), uploadDir),
+            serveRoot: `/${uploadDir}`,
+          },
+        ];
+      },
     }),
     ThrottlerModule.forRoot([
       {

@@ -35,7 +35,7 @@ export class MediaController {
     @UseInterceptors(
         FileInterceptor('file', {
             storage: diskStorage({
-                destination: join(__dirname, '..', '..', '..', 'uploads', 'photos'),
+                destination: join(process.cwd(), process.env.UPLOAD_DIR || 'uploads', 'photos'),
                 filename: (req, file, callback) => {
                     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
                     const ext = extname(file.originalname);
