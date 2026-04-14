@@ -230,3 +230,81 @@ export interface DashboardStats {
   totalMaterials: number;
   totalSnacks: number;
 }
+
+export interface ReportFilters {
+  country?: string;
+  district?: string;
+  club?: string;
+  participantType?: string;
+  status?: string;
+  paymentStatus?: string;
+  fromDate?: string;
+  toDate?: string;
+  search?: string;
+}
+
+export interface ReportSummary {
+  total: number;
+  byStatus?: Record<string, number>;
+  byCountry?: Record<string, number>;
+  byType?: Record<string, number>;
+}
+
+export interface ParticipantsReportResponse {
+  total: number;
+  summary: {
+    total: number;
+    byStatus: Record<string, number>;
+    byCountry: Record<string, number>;
+    byType: Record<string, number>;
+  };
+  items: Participant[];
+}
+
+export interface PaymentsReportResponse {
+  total: number;
+  totalExpected: number;
+  totalPaid: number;
+  totalBalance: number;
+  summary: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+  items: Payment[];
+}
+
+export interface AttendanceReportResponse {
+  total: number;
+  summary: {
+    total: number;
+    byType: Record<string, number>;
+    byActivity: Record<string, number>;
+  };
+  items: AttendanceRecord[];
+}
+
+export interface DeliveriesReportResponse {
+  total: number;
+  summary: {
+    total: number;
+    byType: Record<string, number>;
+  };
+  items: DeliveryRecord[];
+}
+
+export interface DashboardReportResponse {
+  totalParticipants: number;
+  participantsByStatus: Record<string, number>;
+  participantsByCountry: Record<string, number>;
+  participantsByType: Record<string, number>;
+  totalPayments: number;
+  totalExpected: number;
+  totalPaid: number;
+  totalBalance: number;
+  paymentsByStatus: Record<string, number>;
+  totalAttendance: number;
+  attendanceByType: Record<string, number>;
+  attendanceByActivity: Record<string, number>;
+  totalDeliveries: number;
+  deliveriesByType: Record<string, number>;
+}

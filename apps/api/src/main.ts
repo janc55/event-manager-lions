@@ -20,11 +20,11 @@ async function bootstrap() {
     .map(o => o.trim().replace(/\/$/, '')) // Remove trailing slashes
     .filter(o => o);
 
-  console.log('CORS Whitelist (normalized):', origins);
+  //console.log('CORS Whitelist (normalized):', origins);
 
   app.enableCors({
     origin: (origin, callback) => {
-      console.log('Incoming Request Origin (raw):', origin);
+      //console.log('Incoming Request Origin (raw):', origin);
 
       const normalizedOrigin = origin ? origin.replace(/\/$/, '') : '';
 

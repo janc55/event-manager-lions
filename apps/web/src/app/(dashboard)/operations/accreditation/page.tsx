@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Search, User } from 'lucide-react';
+import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Search, User, Camera, CameraOff } from 'lucide-react';
 import type { Participant, ScanResponse } from '@/types';
 import { formatMoney } from '@/lib/utils';
+import QrScanner from '@/components/qr-scanner';
 
 export default function AccreditationPage() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -13,14 +14,19 @@ export default function AccreditationPage() {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<{ name: string; time: string; success: boolean }[]>([]);
 
+  // Scanner mode
+  const [cameraMode, setCameraMode] = useState(false);
+
   // Manual search
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Participant[]>([]);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [result]);
+    if (!cameraMode && !searchMode) {
+      inputRef.current?.focus();
+    }
+  }, [result, cameraMode, searchMode]);
 
   const handleScan = useCallback(async (code: string) => {
     if (!code.trim() || loading) return;
@@ -40,9 +46,11 @@ export default function AccreditationPage() {
     } finally {
       setLoading(false);
       setQrInput('');
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => {
+        if (!cameraMode) inputRef.current?.focus();
+      }, 100);
     }
-  }, [loading]);
+  }, [loading, cameraMode]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -73,6 +81,14 @@ export default function AccreditationPage() {
     handleScan(p.qrCode);
   };
 
+  const toggleCamera = () => {
+    setCameraMode(!cameraMode);
+    setSearchMode(false);
+    if (!cameraMode) {
+      setQrInput('');
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -80,15 +96,41 @@ export default function AccreditationPage() {
           <h1 className="text-2xl font-bold text-white">Acreditación General</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Escanee el código QR del participante</p>
         </div>
-        <button onClick={() => setSearchMode(!searchMode)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-          style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>
-          <Search className="w-4 h-4" /> Buscar manual
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={toggleCamera}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              cameraMode ? 'text-white' : ''
+            }`}
+            style={{ 
+              background: cameraMode ? 'var(--color-primary)' : 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)'
+            }}
+          >
+            {cameraMode ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+            {cameraMode ? 'Cámara activa' : 'Usar cámara'}
+          </button>
+          <button 
+            onClick={() => { setSearchMode(!searchMode); setCameraMode(false); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+            style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+          >
+            <Search className="w-4 h-4" /> Buscar manual
+          </button>
+        </div>
       </div>
 
+      {/* QR Scanner */}
+      {cameraMode && (
+        <QrScanner
+          isActive={cameraMode}
+          onToggle={toggleCamera}
+          onScanSuccess={handleScan}
+        />
+      )}
+
       {/* QR Input */}
-      {!searchMode && (
+      {!cameraMode && !searchMode && (
         <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
           <div className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-4 animate-pulse-gold"
             style={{ background: 'linear-gradient(135deg, rgba(184, 134, 11, 0.15), rgba(218, 165, 32, 0.1))', border: '2px solid var(--color-primary)' }}>

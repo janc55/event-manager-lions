@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import { Ticket, CheckCircle2, XCircle, Search, User } from 'lucide-react';
+import { Ticket, CheckCircle2, XCircle, Search, User, Camera, CameraOff } from 'lucide-react';
 import type { Activity, Participant, ScanResponse } from '@/types';
+import QrScanner from '@/components/qr-scanner';
 
 export default function ActivityScanPage() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -13,6 +14,10 @@ export default function ActivityScanPage() {
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<{ name: string; time: string; success: boolean }[]>([]);
+  
+  // Scanner mode
+  const [cameraMode, setCameraMode] = useState(false);
+  
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Participant[]>([]);
@@ -23,7 +28,11 @@ export default function ActivityScanPage() {
       .catch(console.error);
   }, []);
 
-  useEffect(() => { inputRef.current?.focus(); }, [result, selectedActivity]);
+  useEffect(() => { 
+    if (!cameraMode && !searchMode) {
+      inputRef.current?.focus(); 
+    }
+  }, [result, selectedActivity, cameraMode, searchMode]);
 
   const handleScan = useCallback(async (code: string) => {
     if (!code.trim() || !selectedActivity || loading) return;
@@ -40,9 +49,9 @@ export default function ActivityScanPage() {
     } finally {
       setLoading(false);
       setQrInput('');
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => { if (!cameraMode) inputRef.current?.focus(); }, 100);
     }
-  }, [loading, selectedActivity]);
+  }, [loading, selectedActivity, cameraMode]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -53,6 +62,14 @@ export default function ActivityScanPage() {
     } catch { setSearchResults([]); }
   };
 
+  const toggleCamera = () => {
+    setCameraMode(!cameraMode);
+    setSearchMode(false);
+    if (!cameraMode) {
+      setQrInput('');
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -60,11 +77,29 @@ export default function ActivityScanPage() {
           <h1 className="text-2xl font-bold text-white">Control por Actividad</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Registrar asistencia a una actividad específica</p>
         </div>
-        <button onClick={() => setSearchMode(!searchMode)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-          style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>
-          <Search className="w-4 h-4" /> Buscar manual
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={toggleCamera}
+            disabled={!selectedActivity}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              cameraMode ? 'text-white' : 'disabled:opacity-50 disabled:cursor-not-allowed'
+            }`}
+            style={{ 
+              background: cameraMode ? 'var(--color-primary)' : 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)'
+            }}
+          >
+            {cameraMode ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+            {cameraMode ? 'Cámara activa' : 'Usar cámara'}
+          </button>
+          <button 
+            onClick={() => { setSearchMode(!searchMode); setCameraMode(false); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+            style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+          >
+            <Search className="w-4 h-4" /> Buscar manual
+          </button>
+        </div>
       </div>
 
       {/* Activity selector */}
@@ -81,8 +116,17 @@ export default function ActivityScanPage() {
         )}
       </div>
 
+      {/* QR Scanner */}
+      {cameraMode && selectedActivity && (
+        <QrScanner
+          isActive={cameraMode}
+          onToggle={toggleCamera}
+          onScanSuccess={handleScan}
+        />
+      )}
+
       {/* QR Input */}
-      {!searchMode && selectedActivity && (
+      {!cameraMode && !searchMode && selectedActivity && (
         <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
           <Ticket className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-primary-light)' }} />
           <p className="text-white font-medium mb-4">Escanee QR para registrar asistencia</p>

@@ -32,10 +32,16 @@ async function request<T>(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    console.error('Fetch error:', err);
+    throw new ApiError('Error de conexión. Verifica que el servidor esté activo.', 0);
+  }
 
   if (res.status === 401) {
     if (typeof window !== 'undefined') {
@@ -47,17 +53,27 @@ async function request<T>(
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+    let body: Record<string, unknown> = {};
+    try {
+      const text = await res.text();
+      body = JSON.parse(text);
+    } catch {
+      body = { message: `Error ${res.status}` };
+    }
     throw new ApiError(
-      body.message || `Error ${res.status}`,
+      (body.message as string) || `Error ${res.status}`,
       res.status,
     );
   }
 
-  // Handle empty responses (204, etc.)
   const text = await res.text();
   if (!text) return {} as T;
-  return JSON.parse(text);
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    console.error('JSON parse error:', err, text);
+    throw new ApiError('Error al procesar respuesta del servidor', 0);
+  }
 }
 
 export const api = {
@@ -87,7 +103,7 @@ export const api = {
     });
   },
 
-  // Special: get PDF as blob
+// Special: get PDF as blob
   getPdf: async (endpoint: string): Promise<Blob> => {
     const token = getToken();
     const headers: Record<string, string> = {};
@@ -96,6 +112,26 @@ export const api = {
     const res = await fetch(`${API_BASE}${endpoint}`, { headers });
     if (!res.ok) throw new ApiError('Error descargando PDF', res.status);
     return res.blob();
+  },
+
+  // Special: download file (CSV, Excel, etc.)
+  downloadFile: async (endpoint: string, filename: string) => {
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}${endpoint}`, { headers });
+    if (!res.ok) throw new ApiError('Error descargando archivo', res.status);
+    
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   },
 
   getFileUrl: (path?: string | null) => {

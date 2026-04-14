@@ -3,9 +3,6 @@ import {
     Post,
     UploadedFile,
     UseInterceptors,
-    ParseFilePipe,
-    MaxFileSizeValidator,
-    FileTypeValidator,
     UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -32,7 +29,7 @@ export class MediaController {
             },
         },
     })
-    @UseInterceptors(
+@UseInterceptors(
         FileInterceptor('file', {
             storage: diskStorage({
                 destination: join(process.cwd(), process.env.UPLOAD_DIR || 'uploads', 'photos'),
@@ -45,17 +42,15 @@ export class MediaController {
         }),
     )
     uploadFile(
-        @UploadedFile(
-            new ParseFilePipe({
-                validators: [
-                    new MaxFileSizeValidator({ maxSize: 2 * 1024 * 1024 }), // 2MB
-                    new FileTypeValidator({ fileType: /(image\/jpeg|image\/png|image\/jpg)$/ }),
-                ],
-                fileIsRequired: true,
-            }),
-        )
-        file: Express.Multer.File,
+        @UploadedFile() file: Express.Multer.File,
     ) {
+        // Basic validation (Multer already handles content-type via FileInterceptor)
+        if (!file.mimetype.startsWith('image/')) {
+            throw new Error('Solo se permiten imágenes');
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            throw new Error('El archivo no debe superar 2MB');
+        }
         return {
             url: `/uploads/photos/${file.filename}`,
             filename: file.filename,
