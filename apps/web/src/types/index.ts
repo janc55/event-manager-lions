@@ -188,6 +188,13 @@ export interface ReviewPaymentDto {
   notes?: string;
 }
 
+export interface UpdatePaymentDto {
+  concept?: string;
+  expectedAmount?: number;
+  paidAmount?: number;
+  notes?: string;
+}
+
 export interface CreateActivityDto {
   name: string;
   description?: string;

@@ -6,6 +6,7 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { ParticipantsService } from '../participants/participants.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ReviewPaymentDto } from './dto/review-payment.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { Payment } from './entities/payment.entity';
 
 @Injectable()
@@ -14,7 +15,7 @@ export class PaymentsService {
     @InjectRepository(Payment)
     private readonly paymentsRepository: Repository<Payment>,
     private readonly participantsService: ParticipantsService,
-  ) {}
+  ) { }
 
   async create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
     await this.participantsService.findOne(createPaymentDto.participantId);
@@ -33,9 +34,9 @@ export class PaymentsService {
     return this.paymentsRepository.save(payment);
   }
 
-  async attachVoucher(id: string, filePath: string): Promise<Payment> {
+  async attachVoucher(id: string, voucherUrl: string): Promise<Payment> {
     const payment = await this.findOne(id);
-    payment.voucherFile = filePath;
+    payment.voucherFile = voucherUrl;
     return this.paymentsRepository.save(payment);
   }
 
@@ -53,6 +54,21 @@ export class PaymentsService {
     if (reviewPaymentDto.status === PaymentStatus.WAIVED) {
       payment.balance = 0;
     }
+
+    return this.paymentsRepository.save(payment);
+  }
+
+  async update(id: string, updatePaymentDto: UpdatePaymentDto): Promise<Payment> {
+    const payment = await this.findOne(id);
+
+    if (updatePaymentDto.concept !== undefined) payment.concept = updatePaymentDto.concept;
+    if (updatePaymentDto.expectedAmount !== undefined)
+      payment.expectedAmount = updatePaymentDto.expectedAmount;
+    if (updatePaymentDto.paidAmount !== undefined) payment.paidAmount = updatePaymentDto.paidAmount;
+    if (updatePaymentDto.notes !== undefined) payment.notes = updatePaymentDto.notes;
+
+    payment.balance = Number(payment.expectedAmount) - Number(payment.paidAmount);
+    payment.status = this.resolveStatus(payment.expectedAmount, payment.paidAmount);
 
     return this.paymentsRepository.save(payment);
   }

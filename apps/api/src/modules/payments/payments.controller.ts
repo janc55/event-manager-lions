@@ -21,6 +21,7 @@ import { UserRole } from '../../common/enums/user-role.enum';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ReviewPaymentDto } from './dto/review-payment.dto';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('payments')
@@ -28,7 +29,7 @@ import { PaymentsService } from './payments.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.OPERATOR)
@@ -50,16 +51,15 @@ export class PaymentsController {
       storage: diskStorage({
         destination: 'uploads/vouchers',
         filename: (_req, file, cb) => {
-          const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(
-            file.originalname,
-          )}`;
-          cb(null, uniqueName);
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `voucher-${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
     }),
   )
   attachVoucher(@Param('id') id: string, @UploadedFile() file?: Express.Multer.File) {
-    return this.paymentsService.attachVoucher(id, file?.path ?? '');
+    const voucherUrl = file ? `/uploads/vouchers/${file.filename}` : '';
+    return this.paymentsService.attachVoucher(id, voucherUrl);
   }
 
   @Patch(':id/review')
@@ -70,6 +70,12 @@ export class PaymentsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.paymentsService.review(id, reviewPaymentDto, user);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
+    return this.paymentsService.update(id, updatePaymentDto);
   }
 
   @Get(':participantId/account-status')

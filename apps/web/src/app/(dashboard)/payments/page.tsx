@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Search, Plus, CheckCircle, XCircle, Eye } from 'lucide-react';
-import type { Payment, CreatePaymentDto, ReviewPaymentDto, PaymentStatus, Participant } from '@/types';
+import { useAuth } from '@/lib/auth';
+import { Search, Plus, CheckCircle, XCircle, Eye, Edit2, ExternalLink } from 'lucide-react';
+import type { Payment, CreatePaymentDto, ReviewPaymentDto, UpdatePaymentDto, PaymentStatus, Participant } from '@/types';
 import { formatMoney, formatDate } from '@/lib/utils';
 
 const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
@@ -14,6 +15,7 @@ const statusLabels: Record<string, { label: string; color: string; bg: string }>
 };
 
 export default function PaymentsPage() {
+  const { isAdmin } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filtered, setFiltered] = useState<Payment[]>([]);
@@ -24,6 +26,7 @@ export default function PaymentsPage() {
   const [showReview, setShowReview] = useState<string | null>(null);
   const [form, setForm] = useState<CreatePaymentDto>({ participantId: '', concept: 'Inscripción', expectedAmount: 0 });
   const [reviewForm, setReviewForm] = useState<ReviewPaymentDto>({ status: 'paid' as PaymentStatus });
+  const [updateForm, setUpdateForm] = useState<UpdatePaymentDto>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [voucherFile, setVoucherFile] = useState<File | null>(null);
@@ -77,8 +80,15 @@ export default function PaymentsPage() {
     if (!showReview) return;
     setSaving(true);
     try {
+      if (isAdmin) {
+        await api.patch(`/payments/${showReview}`, updateForm);
+        if (voucherFile) {
+          await api.upload(`/payments/${showReview}/voucher`, voucherFile);
+        }
+      }
       await api.patch(`/payments/${showReview}/review`, reviewForm);
       setShowReview(null);
+      setVoucherFile(null);
       loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error');
@@ -155,10 +165,21 @@ export default function PaymentsPage() {
                     <td className="px-4 py-3"><span className="px-2.5 py-1 rounded-lg text-xs font-medium" style={{ color: ps.color, background: ps.bg }}>{ps.label}</span></td>
                     <td className="px-4 py-3" style={{ color: 'var(--color-text-muted)' }}>{formatDate(p.createdAt)}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => { setShowReview(p.id); setReviewForm({ status: p.status as PaymentStatus, notes: '' }); }}
-                        className="p-1.5 rounded-lg transition-colors hover:bg-[var(--color-bg-elevated)]" title="Revisar">
-                        <Eye className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => {
+                          setShowReview(p.id);
+                          setReviewForm({ status: p.status as PaymentStatus, notes: p.notes || '' });
+                          setUpdateForm({
+                            concept: p.concept,
+                            expectedAmount: Number(p.expectedAmount),
+                            paidAmount: Number(p.paidAmount),
+                            notes: p.notes || '',
+                          });
+                        }}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-[var(--color-bg-elevated)]" title={isAdmin ? "Editar" : "Ver detalles"}>
+                          {isAdmin ? <Edit2 className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} /> : <Eye className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -222,34 +243,86 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      {/* Review Modal */}
+      {/* Review/Edit Modal */}
       {showReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowReview(null)}>
-          <div className="rounded-2xl p-6 w-full max-w-sm animate-fade-in" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+          <div className="rounded-2xl p-6 w-full max-w-lg animate-fade-in" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
             onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-white mb-4">Revisar pago</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Estado</label>
-                <select value={reviewForm.status} onChange={(e) => setReviewForm((f) => ({ ...f, status: e.target.value as PaymentStatus }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none appearance-none cursor-pointer" style={inputStyle}>
-                  <option value="pending">Pendiente</option>
-                  <option value="partial">Parcial</option>
-                  <option value="paid">Pagado</option>
-                  <option value="waived">Exonerado</option>
-                </select>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white">{isAdmin ? 'Editar pago' : 'Detalles del pago'}</h2>
+              <button onClick={() => setShowReview(null)} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Concepto</label>
+                  <input disabled={!isAdmin} value={updateForm.concept || ''} onChange={(e) => setUpdateForm(f => ({ ...f, concept: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none disabled:opacity-50" style={inputStyle} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Esperado</label>
+                    <input type="number" step="0.01" disabled={!isAdmin} value={updateForm.expectedAmount || 0} onChange={(e) => setUpdateForm(f => ({ ...f, expectedAmount: parseFloat(e.target.value) || 0 }))}
+                      className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none disabled:opacity-50" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Pagado</label>
+                    <input type="number" step="0.01" disabled={!isAdmin} value={updateForm.paidAmount || 0} onChange={(e) => setUpdateForm(f => ({ ...f, paidAmount: parseFloat(e.target.value) || 0 }))}
+                      className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none disabled:opacity-50" style={inputStyle} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Estado</label>
+                  <select value={reviewForm.status} onChange={(e) => setReviewForm((f) => ({ ...f, status: e.target.value as PaymentStatus }))}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none appearance-none cursor-pointer" style={inputStyle}>
+                    <option value="pending">Pendiente</option>
+                    <option value="partial">Parcial</option>
+                    <option value="paid">Pagado</option>
+                    <option value="waived">Exonerado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Notas/Observaciones</label>
+                  <textarea value={reviewForm.notes || ''} onChange={(e) => {
+                    setReviewForm((f) => ({ ...f, notes: e.target.value }));
+                    if (isAdmin) setUpdateForm(f => ({ ...f, notes: e.target.value }));
+                  }}
+                    rows={3} className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none resize-none" style={inputStyle} />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Observaciones</label>
-                <textarea value={reviewForm.notes || ''} onChange={(e) => setReviewForm((f) => ({ ...f, notes: e.target.value }))}
-                  rows={3} className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none resize-none" style={inputStyle} />
+
+              <div className="space-y-4">
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>Voucher</label>
+                <div className="aspect-[4/5] rounded-xl overflow-hidden bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center relative group">
+                  {payments.find(p => p.id === showReview)?.voucherFile ? (
+                    <>
+                      <img src={api.getFileUrl(payments.find(p => p.id === showReview)?.voucherFile)} alt="Voucher" className="w-full h-full object-contain" />
+                      <a href={api.getFileUrl(payments.find(p => p.id === showReview)?.voucherFile)} target="_blank" rel="noopener noreferrer"
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-2 text-sm font-medium">
+                        <ExternalLink className="w-4 h-4" /> Ver original
+                      </a>
+                    </>
+                  ) : (
+                    <div className="text-center p-4">
+                      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Sin voucher adjunto</p>
+                    </div>
+                  )}
+                </div>
+                {isAdmin && (
+                  <div>
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => setVoucherFile(e.target.files?.[0] || null)}
+                      className="w-full text-xs text-white file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[var(--color-bg-elevated)] file:text-white" />
+                  </div>
+                )}
               </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowReview(null)} className="px-4 py-2 rounded-xl text-sm" style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>Cancelar</button>
-                <button onClick={handleReview} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #b8860b, #daa520)' }}>
-                  {saving ? 'Guardando...' : 'Confirmar revisión'}
-                </button>
-              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-[var(--color-border)]">
+              <button onClick={() => setShowReview(null)} className="px-4 py-2 rounded-xl text-sm" style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}>Cancelar</button>
+              <button onClick={handleReview} disabled={saving} className="px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #b8860b, #daa520)' }}>
+                {saving ? 'Guardando...' : isAdmin ? 'Guardar cambios' : 'Confirmar revisión'}
+              </button>
             </div>
           </div>
         </div>
