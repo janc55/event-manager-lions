@@ -148,6 +148,24 @@ export default function ParticipantsPage() {
                             title="Ver detalle">
                             <Eye className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
                           </Link>
+                          <button 
+                            onClick={async () => {
+                              try {
+                                const blob = await api.getPdf(`/participants/${p.id}/badge`);
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `credencial-${p.registrationCode}.pdf`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              } catch (err) {
+                                alert('Error al descargar credencial');
+                              }
+                            }}
+                            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--color-bg-elevated)]"
+                            title="Descargar Credencial">
+                            <Download className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
+                          </button>
                           <Link href={`/participants/${p.id}?edit=true`}
                             className="p-1.5 rounded-lg transition-colors hover:bg-[var(--color-bg-elevated)]"
                             title="Editar">

@@ -34,6 +34,7 @@ export default function ParticipantDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [qrUrl, setQrUrl] = useState<string>('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -52,6 +53,15 @@ export default function ParticipantDetailPage() {
         participantType: p.participantType, specialRequirements: p.specialRequirements || '',
         notes: p.notes || '', lionNumber: p.lionNumber || '', photoUrl: p.photoUrl || '',
       });
+
+      // Fetch QR image
+      api.getPdf(`/participants/${id}/qr`)
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          setQrUrl(url);
+        })
+        .catch(err => console.error('Error loading QR image:', err));
+
     }).catch(console.error).finally(() => setLoading(false));
   }, [id]);
 
@@ -328,8 +338,12 @@ export default function ParticipantDetailPage() {
           {/* QR */}
           <div className="rounded-2xl p-6 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
             <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-primary-light)' }}>Código QR</h3>
-            <div className="w-40 h-40 mx-auto rounded-xl flex items-center justify-center" style={{ background: 'white' }}>
-              <QrCode className="w-24 h-24 text-gray-800" />
+            <div className="w-40 h-40 mx-auto rounded-xl flex items-center justify-center p-2" style={{ background: 'white' }}>
+              {qrUrl ? (
+                <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+              ) : (
+                <QrCode className="w-24 h-24 text-gray-300 animate-pulse" />
+              )}
             </div>
             <p className="text-xs font-mono mt-3 break-all" style={{ color: 'var(--color-text-muted)' }}>{participant.qrCode}</p>
           </div>

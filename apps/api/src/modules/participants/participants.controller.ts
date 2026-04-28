@@ -64,4 +64,18 @@ export class ParticipantsController {
     res.setHeader('Content-Disposition', `inline; filename=credencial-${id}.pdf`);
     res.send(pdf);
   }
+
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Get(':id/qr')
+  async getQr(@Param('id') id: string, @Res() res: Response) {
+    const participant = await this.participantsService.findOne(id);
+    const qrDataUrl = await this.participantsService.generateQrDataUrl(participant);
+    
+    // Convert data URL to buffer
+    const base64Data = qrDataUrl.replace(/^data:image\/png;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    res.setHeader('Content-Type', 'image/png');
+    res.send(buffer);
+  }
 }

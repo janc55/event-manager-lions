@@ -100,26 +100,46 @@ export class ParticipantsService {
   async generateBadgePdf(id: string): Promise<Buffer> {
     const participant = await this.findOne(id);
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([243, 396]);
+
+    // Credential size: 5.4 x 8.5 cm → points (1 cm = 28.3465 pts)
+    const pageWidth = 153.07;  // 5.4 cm
+    const pageHeight = 240.94; // 8.5 cm
+    const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const qrDataUrl = await this.generateQrDataUrl(participant);
-    const qrImage = await pdfDoc.embedPng(qrDataUrl);
 
-    page.drawRectangle({
+    // --- Background image ---
+    const bgPath = join(process.cwd(), 'assets', 'fondo-credencial.png');
+    const bgBytes = await fs.readFile(bgPath);
+    const bgImage = await pdfDoc.embedPng(bgBytes);
+    page.drawImage(bgImage, {
       x: 0,
       y: 0,
-      width: 243,
-      height: 396,
-      color: rgb(0.97, 0.96, 0.92),
+      width: pageWidth,
+      height: pageHeight,
     });
 
-    // Draw Participant Photo if exists
+    // --- QR code (bottom-right, over the white placeholder area) ---
+    const qrDataUrl = await this.generateQrDataUrl(participant);
+    const qrImage = await pdfDoc.embedPng(qrDataUrl);
+    const qrSize = 48;
+    page.drawImage(qrImage, {
+      x: pageWidth - qrSize - 7.1,
+      y: 7.1,
+      width: qrSize,
+      height: qrSize,
+    });
+
+    // --- Participant Photo (mid-height, slightly to the right) ---
     if (participant.photoUrl) {
       try {
         let imageBuffer: ArrayBuffer | Buffer;
         if (participant.photoUrl.startsWith('/uploads/')) {
-          const filePath = join(process.cwd(), 'uploads', 'photos', participant.photoUrl.replace('/uploads/photos/', '').replace('/uploads/', ''));
+          const filePath = join(
+            process.cwd(), 'uploads', 'photos',
+            participant.photoUrl.replace('/uploads/photos/', '').replace('/uploads/', ''),
+          );
           imageBuffer = await fs.readFile(filePath);
         } else {
           const response = await fetch(participant.photoUrl);
@@ -133,83 +153,85 @@ export class ParticipantsService {
           participantImage = await pdfDoc.embedJpg(imageBuffer);
         }
 
+        const photoSize = 50;
+        const photoX = 15;  // slightly right of center
+        const photoY = 125; // mid-height
+
+        // --- Border frame around the photo (rounded rect via SVG path) ---
+        const borderPadding = 2;
+        const r = 4; // corner radius in points
+        const fx = photoX - borderPadding;
+        const fy = photoY - borderPadding;
+        const fw = photoSize + borderPadding * 2;
+        const fh = photoSize + borderPadding * 2;
+        // pdf-lib drawSvgPath: x/y is the top-left origin, y axis goes downward.
+        const svgPath =
+          `M ${r} 0 ` +
+          `L ${fw - r} 0 ` +
+          `Q ${fw} 0 ${fw} ${r} ` +
+          `L ${fw} ${fh - r} ` +
+          `Q ${fw} ${fh} ${fw - r} ${fh} ` +
+          `L ${r} ${fh} ` +
+          `Q 0 ${fh} 0 ${fh - r} ` +
+          `L 0 ${r} ` +
+          `Q 0 0 ${r} 0 ` +
+          `Z`;
+        page.drawSvgPath(svgPath, {
+          x: fx,
+          y: fy + fh, // pdf-lib places SVG origin at this point (top-left of rect)
+          color: rgb(1, 1, 1),
+          borderColor: rgb(0.6, 0.5, 0.1),
+          borderWidth: 1,
+        });
+
         page.drawImage(participantImage, {
-          x: 71.5,
-          y: 200,
-          width: 100,
-          height: 100,
+          x: photoX,
+          y: photoY,
+          width: photoSize,
+          height: photoSize,
         });
       } catch (error) {
         console.error('Error embedding participant photo:', error);
       }
     }
 
-    page.drawText('75 Convencion Nacional', {
-      x: 24,
-      y: 360,
-      size: 16,
-      font: boldFont,
-      color: rgb(0.12, 0.21, 0.34),
-    });
+    // --- Text section at ~3/4 down from top (1/4 from bottom) ---
+    const textColor = rgb(0, 0, 0);
+    const textX = 10;
+    const maxTextWidth = pageWidth - 20;
 
-    page.drawText('Club de Leones Bolivia', {
-      x: 24,
-      y: 340,
-      size: 11,
+    // "NOMBRE DEL PARTICIPANTE" label (small)
+    const labelY = 75;
+    page.drawText('NOMBRE DEL PARTICIPANTE', {
+      x: textX,
+      y: labelY,
+      size: 5,
       font,
-      color: rgb(0.28, 0.28, 0.28),
+      color: textColor,
     });
 
-    const nameY = participant.photoUrl ? 180 : 300;
-    page.drawText(participant.badgeName || `${participant.firstName} ${participant.lastName}`, {
-      x: 24,
+    // Participant name (large, bold)
+    const displayName = `L. ${participant.badgeName || `${participant.firstName} ${participant.lastName}`}`;
+    const nameY = labelY - 13;
+    page.drawText(displayName, {
+      x: textX,
       y: nameY,
-      size: 18,
+      size: 11,
       font: boldFont,
-      color: rgb(0.1, 0.1, 0.1),
-      maxWidth: 195,
+      color: textColor,
+      maxWidth: maxTextWidth,
     });
 
-    const detailsStartY = participant.photoUrl ? 155 : 270;
-    page.drawText(`Club: ${participant.club || 'No especificado'}`, {
-      x: 24,
-      y: detailsStartY,
-      size: 10,
+    // Role / District (small)
+    const roleDistrict = `${participant.roleTitle || participant.participantType} / ${participant.district || 'Sin distrito'}`;
+    const roleY = nameY - 10;
+    page.drawText(roleDistrict, {
+      x: textX,
+      y: roleY,
+      size: 5.5,
       font,
-    });
-    page.drawText(`Distrito: ${participant.district || 'No especificado'}`, {
-      x: 24,
-      y: detailsStartY - 16,
-      size: 10,
-      font,
-    });
-    page.drawText(`Pais: ${participant.country}`, {
-      x: 24,
-      y: detailsStartY - 32,
-      size: 10,
-      font,
-    });
-    page.drawText(`Rol: ${participant.roleTitle || participant.participantType}`, {
-      x: 24,
-      y: detailsStartY - 48,
-      size: 10,
-      font,
-      maxWidth: 160,
-    });
-
-    page.drawImage(qrImage, {
-      x: 160,
-      y: 20,
-      width: 60,
-      height: 60,
-    });
-
-    page.drawText(participant.registrationCode, {
-      x: 24,
-      y: 20,
-      size: 8,
-      font,
-      color: rgb(0.3, 0.3, 0.3),
+      color: textColor,
+      maxWidth: maxTextWidth,
     });
 
     return Buffer.from(await pdfDoc.save());
