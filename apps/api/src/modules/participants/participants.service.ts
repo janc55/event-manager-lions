@@ -123,7 +123,7 @@ export class ParticipantsService {
     // --- QR code (bottom-right, over the white placeholder area) ---
     const qrDataUrl = await this.generateQrDataUrl(participant);
     const qrImage = await pdfDoc.embedPng(qrDataUrl);
-    const qrSize = 48;
+    const qrSize = 61;
     page.drawImage(qrImage, {
       x: pageWidth - qrSize - 7.1,
       y: 7.1,
@@ -154,8 +154,8 @@ export class ParticipantsService {
         }
 
         const photoSize = 50;
-        const photoX = 15;  // slightly right of center
-        const photoY = 125; // mid-height
+        const photoX = 53;  // slightly right of center
+        const photoY = 120; // mid-height
 
         // --- Border frame around the photo (rounded rect via SVG path) ---
         const borderPadding = 2;
@@ -196,12 +196,12 @@ export class ParticipantsService {
     }
 
     // --- Text section at ~3/4 down from top (1/4 from bottom) ---
-    const textColor = rgb(0, 0, 0);
+    const textColor = rgb(1, 1, 1);
     const textX = 10;
     const maxTextWidth = pageWidth - 20;
 
     // "NOMBRE DEL PARTICIPANTE" label (small)
-    const labelY = 75;
+    const labelY = 100;
     page.drawText('NOMBRE DEL PARTICIPANTE', {
       x: textX,
       y: labelY,
@@ -211,12 +211,12 @@ export class ParticipantsService {
     });
 
     // Participant name (large, bold)
-    const toTitleCase = (str: string) => 
+    const toTitleCase = (str: string) =>
       str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
     const rawName = participant.badgeName || `${participant.firstName} ${participant.lastName}`;
     const displayName = `L. ${toTitleCase(rawName)}`;
-    const nameY = labelY - 13;
+    const nameY = labelY - 14;
     page.drawText(displayName, {
       x: textX,
       y: nameY,
@@ -228,7 +228,7 @@ export class ParticipantsService {
 
     // Role / District (small)
     const roleDistrict = `${participant.roleTitle || participant.participantType} / ${participant.district || 'Sin distrito'}`;
-    const roleY = nameY - 10;
+    const roleY = nameY - 11;
     page.drawText(roleDistrict, {
       x: textX,
       y: roleY,

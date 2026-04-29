@@ -43,8 +43,8 @@ export async function generateBadgeImage(data: BadgeData): Promise<string> {
     try {
       const photoImg = await loadImage(api.getFileUrl(data.photoUrl));
       const photoSize = 50 * SCALE;
-      const photoX = 15 * SCALE;
-      const photoY = height - (125 * SCALE) - photoSize; // Convert from bottom-up to top-down
+      const photoX = 52 * SCALE;
+      const photoY = height - (120 * SCALE) - photoSize; // Convert from bottom-up to top-down
 
       // Border frame (rounded)
       const borderPadding = 2 * SCALE;
@@ -85,35 +85,37 @@ export async function generateBadgeImage(data: BadgeData): Promise<string> {
   // 3. QR Code
   try {
     const qrImg = await loadImage(data.qrDataUrl);
-    const qrSize = 48 * SCALE;
-    const qrX = width - qrSize - (7.1 * SCALE);
-    const qrY = height - (7.1 * SCALE) - qrSize;
+    const qrSize = 61 * SCALE;
+    const qrX = width - qrSize - (8 * SCALE);
+    const qrY = height - (8 * SCALE) - qrSize;
     ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
   } catch (e) {
     console.error('Error drawing QR on canvas', e);
   }
 
   // 4. Text
-  ctx.fillStyle = 'black';
+  ctx.fillStyle = 'white';
   ctx.textBaseline = 'top';
 
   // Label
   ctx.font = `${5 * SCALE}px Helvetica, Arial, sans-serif`;
-  ctx.fillText('NOMBRE DEL PARTICIPANTE', 10 * SCALE, height - (80 * SCALE));
+  ctx.fillText('NOMBRE DEL PARTICIPANTE', 10 * SCALE, height - (105 * SCALE));
 
   // Name
-  const toTitleCase = (str: string) => 
+  const toTitleCase = (str: string) =>
     str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
   const rawName = data.badgeName || `${data.firstName} ${data.lastName}`;
   const displayName = `L. ${toTitleCase(rawName)}`;
   ctx.font = `bold ${11 * SCALE}px Helvetica, Arial, sans-serif`;
-  ctx.fillText(displayName, 10 * SCALE, height - (80 * SCALE) + (10 * SCALE));
+  ctx.fillText(displayName, 10 * SCALE, height - (105 * SCALE) + (10 * SCALE));
 
   // Role / District
-  const roleDistrict = `${data.roleTitle || data.participantType} / ${data.district || 'Sin distrito'}`;
+  const UpperCaseRole = (data.roleTitle || data.participantType).toUpperCase();
+  const UpperCaseDistrict = (data.district || 'Sin distrito').toUpperCase();
+  const roleDistrict = `${UpperCaseRole} / ${UpperCaseDistrict}`;
   ctx.font = `${5.5 * SCALE}px Helvetica, Arial, sans-serif`;
-  ctx.fillText(roleDistrict, 10 * SCALE, height - (80 * SCALE) + (26 * SCALE));
+  ctx.fillText(roleDistrict, 10 * SCALE, height - (105 * SCALE) + (26 * SCALE));
 
   return canvas.toDataURL('image/png');
 }
