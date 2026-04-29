@@ -67,7 +67,7 @@ export async function generateBadgeImage(data: BadgeData): Promise<string> {
       ctx.lineTo(fx, fy + r);
       ctx.quadraticCurveTo(fx, fy, fx + r, fy);
       ctx.closePath();
-      
+
       ctx.fillStyle = 'white';
       ctx.fill();
       ctx.strokeStyle = '#99801a'; // Gold-ish
@@ -99,17 +99,21 @@ export async function generateBadgeImage(data: BadgeData): Promise<string> {
 
   // Label
   ctx.font = `${5 * SCALE}px Helvetica, Arial, sans-serif`;
-  ctx.fillText('NOMBRE DEL PARTICIPANTE', 10 * SCALE, height - (75 * SCALE));
+  ctx.fillText('NOMBRE DEL PARTICIPANTE', 10 * SCALE, height - (80 * SCALE));
 
   // Name
-  const displayName = `L. ${data.badgeName || `${data.firstName} ${data.lastName}`}`;
+  const toTitleCase = (str: string) => 
+    str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+  const rawName = data.badgeName || `${data.firstName} ${data.lastName}`;
+  const displayName = `L. ${toTitleCase(rawName)}`;
   ctx.font = `bold ${11 * SCALE}px Helvetica, Arial, sans-serif`;
-  ctx.fillText(displayName, 10 * SCALE, height - (75 * SCALE) + (7 * SCALE));
+  ctx.fillText(displayName, 10 * SCALE, height - (80 * SCALE) + (10 * SCALE));
 
   // Role / District
   const roleDistrict = `${data.roleTitle || data.participantType} / ${data.district || 'Sin distrito'}`;
   ctx.font = `${5.5 * SCALE}px Helvetica, Arial, sans-serif`;
-  ctx.fillText(roleDistrict, 10 * SCALE, height - (75 * SCALE) + (22 * SCALE));
+  ctx.fillText(roleDistrict, 10 * SCALE, height - (80 * SCALE) + (26 * SCALE));
 
   return canvas.toDataURL('image/png');
 }

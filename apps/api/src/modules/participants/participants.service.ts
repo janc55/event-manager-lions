@@ -211,7 +211,11 @@ export class ParticipantsService {
     });
 
     // Participant name (large, bold)
-    const displayName = `L. ${participant.badgeName || `${participant.firstName} ${participant.lastName}`}`;
+    const toTitleCase = (str: string) => 
+      str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+    const rawName = participant.badgeName || `${participant.firstName} ${participant.lastName}`;
+    const displayName = `L. ${toTitleCase(rawName)}`;
     const nameY = labelY - 13;
     page.drawText(displayName, {
       x: textX,
