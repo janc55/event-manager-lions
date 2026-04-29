@@ -33,6 +33,10 @@ import { HealthController } from './modules/health/health.controller';
             rootPath: join(process.cwd(), uploadDir),
             serveRoot: `/${uploadDir}`,
           },
+          {
+            rootPath: join(process.cwd(), 'assets'),
+            serveRoot: '/assets',
+          },
         ];
       },
     }),

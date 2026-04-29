@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Plus, Search, Download, Eye, Pencil, QrCode } from 'lucide-react';
+import { Plus, Search, Download, Eye, Pencil, QrCode, FileText, Image as ImageIcon } from 'lucide-react';
+import { generateBadgeImage } from '@/lib/badge-generator';
 import Link from 'next/link';
 import type { Participant, ParticipantStatus } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -159,12 +160,48 @@ export default function ParticipantsPage() {
                                 a.click();
                                 URL.revokeObjectURL(url);
                               } catch (err) {
-                                alert('Error al descargar credencial');
+                                alert('Error al descargar credencial PDF');
                               }
                             }}
                             className="p-1.5 rounded-lg transition-colors hover:bg-[var(--color-bg-elevated)]"
-                            title="Descargar Credencial">
-                            <Download className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
+                            title="Descargar PDF">
+                            <FileText className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              try {
+                                // We need the QR data URL to generate the image
+                                const qrBlob = await api.getPdf(`/participants/${p.id}/qr`);
+                                const qrDataUrl = await new Promise<string>((resolve) => {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => resolve(reader.result as string);
+                                  reader.readAsDataURL(qrBlob);
+                                });
+
+                                const dataUrl = await generateBadgeImage({
+                                  firstName: p.firstName,
+                                  lastName: p.lastName,
+                                  badgeName: p.badgeName || undefined,
+                                  roleTitle: p.roleTitle || undefined,
+                                  participantType: p.participantType,
+                                  district: p.district || undefined,
+                                  registrationCode: p.registrationCode,
+                                  photoUrl: p.photoUrl || undefined,
+                                  qrDataUrl: qrDataUrl,
+                                });
+                                
+                                const a = document.createElement('a');
+                                a.href = dataUrl;
+                                a.download = `credencial-${p.registrationCode}.png`;
+                                a.click();
+                              } catch (err) {
+                                console.error(err);
+                                alert('Error al generar imagen de la credencial');
+                              }
+                            }}
+                            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--color-bg-elevated)]"
+                            title="Descargar Imagen (PNG)">
+                            <ImageIcon className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
                           </button>
                           <Link href={`/participants/${p.id}?edit=true`}
                             className="p-1.5 rounded-lg transition-colors hover:bg-[var(--color-bg-elevated)]"

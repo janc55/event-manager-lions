@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import { ArrowLeft, Download, QrCode, RefreshCw, Pencil, Save, X, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Download, QrCode, RefreshCw, Pencil, Save, X, ImageIcon, FileText, Image as ImageIconLucide } from 'lucide-react';
+import { generateBadgeImage } from '@/lib/badge-generator';
 import Link from 'next/link';
 import type { Participant, Payment, CreateParticipantDto } from '@/types';
 import { formatDate, formatMoney } from '@/lib/utils';
@@ -129,6 +130,31 @@ export default function ParticipantDetailPage() {
     }
   };
 
+  const handleDownloadImage = async () => {
+    if (!participant || !qrUrl) return;
+    try {
+      const dataUrl = await generateBadgeImage({
+        firstName: participant.firstName,
+        lastName: participant.lastName,
+        badgeName: participant.badgeName || undefined,
+        roleTitle: participant.roleTitle || undefined,
+        participantType: participant.participantType,
+        district: participant.district || undefined,
+        registrationCode: participant.registrationCode,
+        photoUrl: participant.photoUrl || undefined,
+        qrDataUrl: qrUrl,
+      });
+      
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `credencial-${participant.registrationCode}.png`;
+      a.click();
+    } catch (err) {
+      console.error(err);
+      setError('Error al generar imagen de la credencial');
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <svg className="animate-spin h-8 w-8" style={{ color: 'var(--color-primary)' }} viewBox="0 0 24 24">
@@ -193,9 +219,16 @@ export default function ParticipantDetailPage() {
                 <RefreshCw className="w-4 h-4" /> Regenerar QR
               </button>
               <button onClick={handleDownloadBadge}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #b8860b, #daa520)' }}>
-                <Download className="w-4 h-4" /> Credencial PDF
+                className="flex items-center gap-2 px-3 py-2 rounded-l-xl text-xs font-medium text-white transition-all hover:opacity-90 border-r border-white/20"
+                style={{ background: 'linear-gradient(135deg, #b8860b, #daa520)' }}
+                title="Descargar PDF">
+                <FileText className="w-3.5 h-3.5" /> PDF
+              </button>
+              <button onClick={handleDownloadImage}
+                className="flex items-center gap-2 px-3 py-2 rounded-r-xl text-xs font-medium text-white transition-all hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, #b8860b, #daa520)' }}
+                title="Descargar Imagen (PNG)">
+                <ImageIconLucide className="w-3.5 h-3.5" /> Imagen
               </button>
             </>
           )}
