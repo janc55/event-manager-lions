@@ -65,6 +65,9 @@ export default function QrScanner({
     };
   }, [isActive]);
 
+  const lastScanTimeRef = useRef<number>(0);
+  const lastScanCodeRef = useRef<string>('');
+
   const startCamera = async (cameraId: string) => {
     if (!containerRef.current) return;
 
@@ -82,6 +85,18 @@ export default function QrScanner({
           aspectRatio: 1.0,
         },
         (decodedText) => {
+          const now = Date.now();
+          // Prevent multiple scans of the same code within 3 seconds
+          // Or any scan within 1.5 seconds of the previous one
+          if (decodedText === lastScanCodeRef.current && now - lastScanTimeRef.current < 3000) {
+            return;
+          }
+          if (now - lastScanTimeRef.current < 1500) {
+            return;
+          }
+
+          lastScanTimeRef.current = now;
+          lastScanCodeRef.current = decodedText;
           onScanSuccess(decodedText);
         },
         () => {}
