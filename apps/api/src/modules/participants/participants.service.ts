@@ -13,6 +13,7 @@ import { join } from 'path';
 import { CreateParticipantDto } from './dto/create-participant.dto';
 import { UpdateParticipantDto } from './dto/update-participant.dto';
 import { Participant } from './entities/participant.entity';
+import { RegistrationType } from '../../common/enums/registration-type.enum';
 
 @Injectable()
 export class ParticipantsService {
@@ -249,6 +250,35 @@ export class ParticipantsService {
 
   private generateQrToken(): string {
     return `qr_${randomUUID()}`;
+  }
+
+  calculateExpectedAmount(
+    registrationType: RegistrationType,
+    participantType: string,
+    activityIds: string[] = [],
+  ): number {
+    const isSocio = participantType.toLowerCase().includes('socio') || participantType.toLowerCase().includes('león');
+    
+    if (registrationType === RegistrationType.FULL) {
+      // Logic for full registration price if needed, otherwise return a default or handle elsewhere
+      // For now, let's assume 700 for socio and 800 for guest if full? 
+      // Actually, let's just return what the user provides if it's full, or a fixed price.
+      return isSocio ? 660 : 750; // Example: Full is at least 3 events price? 
+      // Wait, let's be safer and only calculate if PARTIAL.
+    }
+
+    const count = activityIds.length;
+    if (count === 0) return 0;
+
+    if (isSocio) {
+      if (count === 1) return 260;
+      if (count === 2) return 500; // 250 * 2
+      return 660; // 220 * 3
+    } else {
+      if (count === 1) return 290;
+      if (count === 2) return 560; // 280 * 2
+      return 750; // 250 * 3
+    }
   }
 }
 

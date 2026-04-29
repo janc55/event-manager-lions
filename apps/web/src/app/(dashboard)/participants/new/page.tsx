@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { ArrowLeft, Save, Upload, X, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, Upload, X, ImageIcon, CheckCircle2, Circle } from 'lucide-react';
 import Link from 'next/link';
-import type { CreateParticipantDto } from '@/types';
+import type { CreateParticipantDto, Activity } from '@/types';
+import { RegistrationType } from '@/types';
+import { useEffect } from 'react';
+import { formatDate } from '@/lib/utils';
 
 export default function NewParticipantPage() {
   const router = useRouter();
@@ -13,13 +16,44 @@ export default function NewParticipantPage() {
   const [error, setError] = useState('');
   const [form, setForm] = useState<CreateParticipantDto>({
     firstName: '', lastName: '', country: '', email: '', participantType: 'delegado',
-    lionNumber: '', photoUrl: '',
+    lionNumber: '', photoUrl: '', registrationType: RegistrationType.FULL,
+    accessRights: [],
   });
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
 
-  const set = (field: keyof CreateParticipantDto, value: string) =>
+  useEffect(() => {
+    api.get<Activity[]>('/activities').then(setActivities).catch(console.error);
+  }, []);
+
+  const set = (field: keyof CreateParticipantDto, value: any) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  const toggleActivity = (id: string) => {
+    const current = form.accessRights || [];
+    if (current.includes(id)) {
+      set('accessRights', current.filter((a) => a !== id));
+    } else {
+      set('accessRights', [...current, id]);
+    }
+  };
+
+  const calculatePrice = () => {
+    const isSocio = form.participantType.toLowerCase().includes('socio') || form.participantType.toLowerCase().includes('león') || form.participantType === 'delegado';
+    if (form.registrationType === RegistrationType.FULL) return isSocio ? 660 : 750;
+    const count = form.accessRights?.length || 0;
+    if (count === 0) return 0;
+    if (isSocio) {
+      if (count === 1) return 260;
+      if (count === 2) return 500;
+      return 660;
+    } else {
+      if (count === 1) return 290;
+      if (count === 2) return 560;
+      return 750;
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -168,6 +202,71 @@ export default function NewParticipantPage() {
                 <option value="organizador">Organizador</option>
                 <option value="prensa">Prensa</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Tipo de registro *</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => set('registrationType', RegistrationType.FULL)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-all border"
+                  style={{ 
+                    background: form.registrationType === RegistrationType.FULL ? 'rgba(218, 165, 32, 0.1)' : 'var(--color-bg-elevated)',
+                    borderColor: form.registrationType === RegistrationType.FULL ? 'var(--color-primary-light)' : 'var(--color-border)',
+                    color: form.registrationType === RegistrationType.FULL ? 'var(--color-primary-light)' : 'var(--color-text-secondary)'
+                  }}>
+                  {form.registrationType === RegistrationType.FULL ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                  Completo
+                </button>
+                <button type="button" onClick={() => set('registrationType', RegistrationType.PARTIAL)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-all border"
+                  style={{ 
+                    background: form.registrationType === RegistrationType.PARTIAL ? 'rgba(218, 165, 32, 0.1)' : 'var(--color-bg-elevated)',
+                    borderColor: form.registrationType === RegistrationType.PARTIAL ? 'var(--color-primary-light)' : 'var(--color-border)',
+                    color: form.registrationType === RegistrationType.PARTIAL ? 'var(--color-primary-light)' : 'var(--color-text-secondary)'
+                  }}>
+                  {form.registrationType === RegistrationType.PARTIAL ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                  Parcial (Eventos)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {form.registrationType === RegistrationType.PARTIAL && (
+            <div className="space-y-3 pt-2 animate-slide-up">
+              <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Seleccionar Actividades *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {activities.map((activity) => (
+                  <button key={activity.id} type="button" onClick={() => toggleActivity(activity.id)}
+                    className="flex items-center gap-3 p-3 rounded-xl border text-left transition-all"
+                    style={{ 
+                      background: form.accessRights?.includes(activity.id) ? 'rgba(255, 255, 255, 0.05)' : 'var(--color-bg-elevated)',
+                      borderColor: form.accessRights?.includes(activity.id) ? 'var(--color-primary-light)' : 'var(--color-border)',
+                    }}>
+                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${form.accessRights?.includes(activity.id) ? 'bg-[var(--color-primary-light)] border-[var(--color-primary-light)]' : 'border-[var(--color-border)]'}`}>
+                      {form.accessRights?.includes(activity.id) && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{activity.name}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{formatDate(activity.date)} {activity.startTime}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center justify-between p-4 rounded-xl" 
+              style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+              <div>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Costo estimado de inscripción</p>
+                <p className="text-lg font-bold text-white">Bs. {calculatePrice().toLocaleString()}</p>
+              </div>
+              {form.registrationType === RegistrationType.PARTIAL && (
+                <div className="text-right">
+                  <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Eventos seleccionados</p>
+                  <p className="text-sm font-medium text-[var(--color-primary-light)]">{form.accessRights?.length || 0} de {activities.length}</p>
+                </div>
+              )}
             </div>
           </div>
 

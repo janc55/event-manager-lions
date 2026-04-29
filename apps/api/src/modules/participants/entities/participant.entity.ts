@@ -1,6 +1,7 @@
 import { Column, Entity, Index } from 'typeorm';
 import { AppBaseEntity } from '../../../common/entities/app-base.entity';
 import { ParticipantStatus } from '../../../common/enums/participant-status.enum';
+import { RegistrationType } from '../../../common/enums/registration-type.enum';
 
 @Entity('participants')
 export class Participant extends AppBaseEntity {
@@ -65,4 +66,15 @@ export class Participant extends AppBaseEntity {
     default: ParticipantStatus.PRE_REGISTERED,
   })
   status: ParticipantStatus;
+
+  @Column({
+    name: 'registration_type',
+    type: 'enum',
+    enum: RegistrationType,
+    default: RegistrationType.FULL,
+  })
+  registrationType: RegistrationType;
+
+  @Column({ name: 'access_rights', type: 'simple-json', nullable: true })
+  accessRights: string[] | null;
 }

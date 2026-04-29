@@ -25,6 +25,11 @@ export enum ActivityStatus {
   CLOSED = 'closed',
 }
 
+export enum RegistrationType {
+  FULL = 'FULL',
+  PARTIAL = 'PARTIAL',
+}
+
 export enum AttendanceType {
   GENERAL = 'general',
   ACTIVITY = 'activity',
@@ -66,6 +71,8 @@ export interface Participant {
   status: ParticipantStatus;
   lionNumber?: string | null;
   photoUrl?: string | null;
+  registrationType: RegistrationType;
+  accessRights?: string[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -173,6 +180,8 @@ export interface CreateParticipantDto {
   status?: ParticipantStatus;
   lionNumber?: string;
   photoUrl?: string;
+  registrationType?: RegistrationType;
+  accessRights?: string[];
 }
 
 export interface CreatePaymentDto {

@@ -14,7 +14,13 @@ export function formatMoney(amount: number): string {
 }
 
 export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('es-BO', {
+  if (!dateStr) return '—';
+  // If it's a date-only string (YYYY-MM-DD), use slashes to avoid UTC shift
+  const d = dateStr.includes('-') && !dateStr.includes('T')
+    ? new Date(dateStr.replace(/-/g, '/'))
+    : new Date(dateStr);
+    
+  return d.toLocaleDateString('es-BO', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

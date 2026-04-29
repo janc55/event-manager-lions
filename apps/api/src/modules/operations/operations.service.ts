@@ -55,6 +55,14 @@ export class OperationsService {
     const participant = await this.participantsService.findByQrCode(qrCode);
     await this.activitiesService.findOne(activityId);
 
+    // Validate access rights
+    if (participant.registrationType === 'PARTIAL') {
+      const rights = participant.accessRights || [];
+      if (!rights.includes(activityId)) {
+        throw new ConflictException('El participante no tiene acceso registrado para esta actividad.');
+      }
+    }
+
     const existingRecord = await this.attendanceRepository.findOne({
       where: {
         participantId: participant.id,

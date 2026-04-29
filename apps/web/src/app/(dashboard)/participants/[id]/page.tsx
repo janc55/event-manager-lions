@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import { ArrowLeft, Download, QrCode, RefreshCw, Pencil, Save, X, ImageIcon, FileText, Image as ImageIconLucide } from 'lucide-react';
+import { ArrowLeft, Download, QrCode, RefreshCw, Pencil, Save, X, ImageIcon, FileText, Image as ImageIconLucide, CheckCircle2, Circle } from 'lucide-react';
 import { generateBadgeImage } from '@/lib/badge-generator';
 import Link from 'next/link';
-import type { Participant, Payment, CreateParticipantDto } from '@/types';
+import type { Participant, Payment, CreateParticipantDto, Activity } from '@/types';
+import { RegistrationType } from '@/types';
 import { formatDate, formatMoney } from '@/lib/utils';
 
 const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
@@ -37,6 +38,7 @@ export default function ParticipantDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [qrUrl, setQrUrl] = useState<string>('');
   const [error, setError] = useState('');
+  const [activities, setActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -44,15 +46,19 @@ export default function ParticipantDetailPage() {
       api.get<Payment[]>('/payments').then((all) =>
         Array.isArray(all) ? all.filter((p) => p.participantId === id) : []
       ).catch(() => []),
-    ]).then(([p, pays]) => {
+      api.get<Activity[]>('/activities').catch(() => []),
+    ]).then(([p, pays, acts]) => {
       setParticipant(p);
       setPayments(pays);
+      setActivities(acts);
       setForm({
         firstName: p.firstName, lastName: p.lastName, badgeName: p.badgeName || '',
         documentNumber: p.documentNumber || '', country: p.country, district: p.district || '',
         club: p.club || '', roleTitle: p.roleTitle || '', email: p.email, phone: p.phone || '',
         participantType: p.participantType, specialRequirements: p.specialRequirements || '',
         notes: p.notes || '', lionNumber: p.lionNumber || '', photoUrl: p.photoUrl || '',
+        registrationType: p.registrationType,
+        accessRights: p.accessRights || [],
       });
 
       // Fetch QR image
@@ -169,6 +175,15 @@ export default function ParticipantDetailPage() {
   const st = statusLabels[participant.status] || statusLabels.pre_registered;
   const inputStyle = { background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' };
 
+  const toggleActivity = (actId: string) => {
+    const current = (form.accessRights || []) as string[];
+    if (current.includes(actId)) {
+      setForm(f => ({ ...f, accessRights: current.filter(id => id !== actId) }));
+    } else {
+      setForm(f => ({ ...f, accessRights: [...current, actId] }));
+    }
+  };
+
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.paidAmount), 0);
   const totalExpected = payments.reduce((sum, p) => sum + Number(p.expectedAmount), 0);
   const balance = totalExpected - totalPaid;
@@ -274,7 +289,54 @@ export default function ParticipantDetailPage() {
                       className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none" style={inputStyle} />
                   </div>
                 ))}
-                <div className="col-span-2">
+
+                <div className="col-span-2 space-y-4">
+                  <div className="h-px bg-[var(--color-border)] my-2" />
+                  <p className="text-xs font-semibold" style={{ color: 'var(--color-primary-light)' }}>Tipo de registro</p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setForm(f => ({ ...f, registrationType: RegistrationType.FULL }))}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs transition-all border"
+                      style={{ 
+                        background: form.registrationType === RegistrationType.FULL ? 'rgba(218, 165, 32, 0.1)' : 'var(--color-bg-elevated)',
+                        borderColor: form.registrationType === RegistrationType.FULL ? 'var(--color-primary-light)' : 'var(--color-border)',
+                        color: form.registrationType === RegistrationType.FULL ? 'var(--color-primary-light)' : 'var(--color-text-secondary)'
+                      }}>
+                      {form.registrationType === RegistrationType.FULL ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
+                      Completo
+                    </button>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, registrationType: RegistrationType.PARTIAL }))}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs transition-all border"
+                      style={{ 
+                        background: form.registrationType === RegistrationType.PARTIAL ? 'rgba(218, 165, 32, 0.1)' : 'var(--color-bg-elevated)',
+                        borderColor: form.registrationType === RegistrationType.PARTIAL ? 'var(--color-primary-light)' : 'var(--color-border)',
+                        color: form.registrationType === RegistrationType.PARTIAL ? 'var(--color-primary-light)' : 'var(--color-text-secondary)'
+                      }}>
+                      {form.registrationType === RegistrationType.PARTIAL ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
+                      Parcial (Eventos)
+                    </button>
+                  </div>
+
+                  {form.registrationType === RegistrationType.PARTIAL && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-slide-up">
+                      {activities.map((activity) => (
+                        <button key={activity.id} type="button" onClick={() => toggleActivity(activity.id)}
+                          className="flex items-center gap-2 p-2 rounded-lg border text-left transition-all"
+                          style={{ 
+                            background: form.accessRights?.includes(activity.id) ? 'rgba(255, 255, 255, 0.05)' : 'var(--color-bg-elevated)',
+                            borderColor: form.accessRights?.includes(activity.id) ? 'var(--color-primary-light)' : 'var(--color-border)',
+                          }}>
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${form.accessRights?.includes(activity.id) ? 'bg-[var(--color-primary-light)] border-[var(--color-primary-light)]' : 'border-[var(--color-border)]'}`}>
+                            {form.accessRights?.includes(activity.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-medium text-white">{activity.name}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="h-px bg-[var(--color-border)] my-2" />
                   <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Foto del participante</label>
                   <div className="flex items-center gap-4">
                     {form.photoUrl ? (
@@ -312,15 +374,32 @@ export default function ParticipantDetailPage() {
                   { label: 'Club', value: participant.club || '—' },
                   { label: 'Cargo', value: participant.roleTitle || '—' },
                   { label: 'Tipo', value: participant.participantType },
+                  { label: 'Registro', value: participant.registrationType === RegistrationType.FULL ? 'Completo' : 'Parcial (Eventos)' },
                   { label: 'Credencial', value: participant.badgeName || participant.firstName + ' ' + participant.lastName },
                   { label: 'Número de León', value: participant.lionNumber || '—' },
-                  { label: 'Registro', value: formatDate(participant.createdAt) },
+                  { label: 'Fecha Registro', value: formatDate(participant.createdAt) },
                 ].map((f) => (
                   <div key={f.label}>
                     <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{f.label}</p>
                     <p className="text-sm text-white font-medium">{f.value}</p>
                   </div>
                 ))}
+                {participant.registrationType === RegistrationType.PARTIAL && (
+                  <div className="col-span-2 pt-2">
+                    <p className="text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>Actividades permitidas</p>
+                    <div className="flex flex-wrap gap-2">
+                      {participant.accessRights?.map(id => {
+                        const act = activities.find(a => a.id === id);
+                        return act ? (
+                          <span key={id} className="px-2 py-1 rounded-lg text-[10px] font-medium border"
+                            style={{ borderColor: 'var(--color-primary-light)', color: 'var(--color-primary-light)', background: 'rgba(218, 165, 32, 0.05)' }}>
+                            {act.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {participant.specialRequirements && (

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsEmail,
   IsEnum,
   IsOptional,
@@ -7,6 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { ParticipantStatus } from '../../../common/enums/participant-status.enum';
+import { RegistrationType } from '../../../common/enums/registration-type.enum';
 
 export class CreateParticipantDto {
   @ApiProperty()
@@ -86,4 +88,15 @@ export class CreateParticipantDto {
   @IsOptional()
   @IsString()
   photoUrl?: string;
+
+  @ApiPropertyOptional({ enum: RegistrationType })
+  @IsOptional()
+  @IsEnum(RegistrationType)
+  registrationType?: RegistrationType;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  accessRights?: string[];
 }

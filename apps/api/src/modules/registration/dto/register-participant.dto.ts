@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+    IsArray,
     IsEmail,
+    IsEnum,
     IsNumber,
     IsOptional,
     IsString,
@@ -8,6 +10,7 @@ import {
     Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { RegistrationType } from '../../../common/enums/registration-type.enum';
 
 export class RegisterParticipantDto {
     @ApiProperty()
@@ -98,4 +101,15 @@ export class RegisterParticipantDto {
     @IsNumber()
     @Min(0)
     expectedAmount: number;
+
+    @ApiPropertyOptional({ enum: RegistrationType })
+    @IsOptional()
+    @IsEnum(RegistrationType)
+    registrationType?: RegistrationType;
+
+    @ApiPropertyOptional({ type: [String] })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    accessRights?: string[];
 }

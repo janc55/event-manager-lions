@@ -11,6 +11,7 @@ import { Payment } from '../payments/entities/payment.entity';
 import { RegisterParticipantDto } from './dto/register-participant.dto';
 import { ParticipantStatus } from '../../common/enums/participant-status.enum';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
+import { RegistrationType } from '../../common/enums/registration-type.enum';
 
 @Injectable()
 export class RegistrationService {
@@ -72,6 +73,8 @@ export class RegistrationService {
                 registrationCode: this.generateRegistrationCode(),
                 qrCode: this.generateQrToken(),
                 status: ParticipantStatus.PRE_REGISTERED,
+                registrationType: registerDto.registrationType || RegistrationType.FULL,
+                accessRights: registerDto.accessRights || null,
                 photoUrl: photoFile ? `/uploads/photos/${photoFile.filename}` : null,
             });
 
