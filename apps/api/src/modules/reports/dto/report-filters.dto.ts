@@ -46,4 +46,9 @@ export class ReportFiltersDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Filtrar por actividad' })
+  @IsOptional()
+  @IsString()
+  activityId?: string;
 }

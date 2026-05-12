@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Users, CreditCard, CheckCircle2, Package, Coffee, ScanLine, ArrowRight } from 'lucide-react';
+import { Users, CreditCard, CheckCircle2, Package, Coffee, ScanLine, ArrowRight, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-import type { Participant, Payment, PaymentStatus } from '@/types';
+import type { Participant, Payment, PaymentStatus, PaginatedResponse } from '@/types';
 
 interface Stats {
   totalParticipants: number;
+  totalPayments: number;
   paid: number;
   pending: number;
   partial: number;
@@ -18,7 +19,7 @@ interface Stats {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({
-    totalParticipants: 0, paid: 0, pending: 0, partial: 0,
+    totalParticipants: 0, totalPayments: 0, paid: 0, pending: 0, partial: 0,
     totalAttendance: 0, totalMaterials: 0, totalSnacks: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -26,22 +27,22 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const [participants, payments, attendance, deliveries] = await Promise.all([
-          api.get<Participant[]>('/participants'),
+        const [participantsData, payments, attendance, deliveries] = await Promise.all([
+          api.get<PaginatedResponse<Participant>>('/participants?limit=1'),
           api.get<Payment[]>('/payments'),
           api.get<{ total: number }>('/operations/attendance').catch(() => ({ total: 0 })),
           api.get<{ materials: number; snacks: number }>('/operations/deliveries').catch(() => ({ materials: 0, snacks: 0 })),
         ]);
 
-        const paid = payments.filter((p) => p.status === ('paid' as PaymentStatus)).length;
-        const pending = payments.filter((p) => p.status === ('pending' as PaymentStatus)).length;
-        const partial = payments.filter((p) => p.status === ('partial' as PaymentStatus)).length;
+        const paid = payments.filter((p) => p.status === ('paid' as PaymentStatus) || p.status === ('waived' as PaymentStatus)).length;
+        const pending = payments.filter((p) => p.status === ('pending' as PaymentStatus) || p.status === ('partial' as PaymentStatus)).length;
 
         setStats({
-          totalParticipants: Array.isArray(participants) ? participants.length : 0,
+          totalParticipants: participantsData?.meta?.total || 0,
+          totalPayments: payments.length,
           paid,
           pending,
-          partial,
+          partial: payments.filter((p) => p.status === ('partial' as PaymentStatus)).length,
           totalAttendance: typeof attendance === 'object' && 'total' in attendance ? attendance.total : (Array.isArray(attendance) ? (attendance as unknown[]).length : 0),
           totalMaterials: typeof deliveries === 'object' && 'materials' in deliveries ? deliveries.materials : (Array.isArray(deliveries) ? (deliveries as unknown[]).length : 0),
           totalSnacks: typeof deliveries === 'object' && 'snacks' in deliveries ? deliveries.snacks : 0,
@@ -57,11 +58,11 @@ export default function DashboardPage() {
 
   const cards = [
     { label: 'Participantes', value: stats.totalParticipants, icon: <Users className="w-6 h-6" />, color: '#3b82f6', href: '/participants' },
-    { label: 'Pagados', value: stats.paid, icon: <CheckCircle2 className="w-6 h-6" />, color: '#22c55e', href: '/payments' },
-    { label: 'Pendientes', value: stats.pending, icon: <CreditCard className="w-6 h-6" />, color: '#f59e0b', href: '/payments' },
+    { label: 'Total Pagos', value: stats.totalPayments, icon: <CreditCard className="w-6 h-6" />, color: '#94a3b8', href: '/payments' },
+    { label: 'Pagados/Exonerados', value: stats.paid, icon: <CheckCircle2 className="w-6 h-6" />, color: '#22c55e', href: '/payments' },
+    { label: 'Pendientes/Parciales', value: stats.pending, icon: <AlertTriangle className="w-6 h-6" />, color: '#f59e0b', href: '/payments' },
     { label: 'Asistencias', value: stats.totalAttendance, icon: <ScanLine className="w-6 h-6" />, color: '#8b5cf6', href: '/operations/accreditation' },
-    { label: 'Materiales', value: stats.totalMaterials, icon: <Package className="w-6 h-6" />, color: '#06b6d4', href: '/operations/materials' },
-    { label: 'Refrigerios', value: stats.totalSnacks, icon: <Coffee className="w-6 h-6" />, color: '#ec4899', href: '/operations/snacks' },
+    { label: 'Materiales/Snacks', value: stats.totalMaterials + stats.totalSnacks, icon: <Package className="w-6 h-6" />, color: '#06b6d4', href: '/operations/materials' },
   ];
 
   const quickActions = [

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Search, Plus, CheckCircle, XCircle, Eye, Edit2, ExternalLink } from 'lucide-react';
-import type { Payment, CreatePaymentDto, ReviewPaymentDto, UpdatePaymentDto, PaymentStatus, Participant } from '@/types';
+import type { Payment, CreatePaymentDto, ReviewPaymentDto, UpdatePaymentDto, PaymentStatus, Participant, PaginatedResponse } from '@/types';
 import { formatMoney, formatDate } from '@/lib/utils';
 
 const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
@@ -33,12 +33,12 @@ export default function PaymentsPage() {
 
   const loadData = async () => {
     try {
-      const [pays, parts] = await Promise.all([
+      const [pays, partsData] = await Promise.all([
         api.get<Payment[]>('/payments'),
-        api.get<Participant[]>('/participants'),
+        api.get<PaginatedResponse<Participant>>('/participants?limit=1000'),
       ]);
       setPayments(Array.isArray(pays) ? pays : []);
-      setParticipants(Array.isArray(parts) ? parts : []);
+      setParticipants(partsData?.data || []);
     } catch (e) { console.error(e); }
     setLoading(false);
   };

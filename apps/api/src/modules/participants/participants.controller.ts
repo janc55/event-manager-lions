@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { CreateParticipantDto } from './dto/create-participant.dto';
 import { UpdateParticipantDto } from './dto/update-participant.dto';
+import { QueryParticipantsDto } from './dto/query-participants.dto';
 import { ParticipantsService } from './participants.service';
 
 @ApiTags('participants')
@@ -26,8 +28,8 @@ export class ParticipantsController {
   constructor(private readonly participantsService: ParticipantsService) {}
 
   @Get()
-  findAll() {
-    return this.participantsService.findAll();
+  findAll(@Query() query: QueryParticipantsDto) {
+    return this.participantsService.findAll(query);
   }
 
   @Get(':id')

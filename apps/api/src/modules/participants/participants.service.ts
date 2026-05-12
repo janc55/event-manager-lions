@@ -14,6 +14,7 @@ import { CreateParticipantDto } from './dto/create-participant.dto';
 import { UpdateParticipantDto } from './dto/update-participant.dto';
 import { Participant } from './entities/participant.entity';
 import { RegistrationType } from '../../common/enums/registration-type.enum';
+import { QueryParticipantsDto, SortOrder } from './dto/query-participants.dto';
 
 @Injectable()
 export class ParticipantsService {
@@ -47,10 +48,59 @@ export class ParticipantsService {
     return this.participantsRepository.save(participant);
   }
 
-  findAll(): Promise<Participant[]> {
-    return this.participantsRepository.find({
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(query: QueryParticipantsDto): Promise<{ data: Participant[]; meta: any }> {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      club,
+      district,
+      status,
+      sortBy = 'createdAt',
+      sortOrder = SortOrder.DESC,
+    } = query;
+
+    const queryBuilder = this.participantsRepository.createQueryBuilder('participant');
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(participant.firstName ILIKE :search OR participant.lastName ILIKE :search OR participant.email ILIKE :search OR participant.documentNumber ILIKE :search OR participant.registrationCode ILIKE :search OR participant.club ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    if (club) {
+      queryBuilder.andWhere('participant.club = :club', { club });
+    }
+
+    if (district) {
+      queryBuilder.andWhere('participant.district = :district', { district });
+    }
+
+    if (status) {
+      queryBuilder.andWhere('participant.status = :status', { status });
+    }
+
+    // Handle sorting
+    const validSortFields = ['firstName', 'lastName', 'club', 'district', 'createdAt', 'status', 'registrationCode'];
+    const actualSortBy = validSortFields.includes(sortBy) ? `participant.${sortBy}` : 'participant.createdAt';
+    queryBuilder.orderBy(actualSortBy, sortOrder);
+
+    // Pagination
+    const skip = (page - 1) * limit;
+    queryBuilder.skip(skip).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
+        limit,
+      },
+    };
   }
 
   async findOne(id: string): Promise<Participant> {

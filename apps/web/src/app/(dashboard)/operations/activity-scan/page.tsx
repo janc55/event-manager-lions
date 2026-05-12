@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { Ticket, CheckCircle2, XCircle, Search, User, Camera, CameraOff } from 'lucide-react';
-import type { Activity, Participant, ScanResponse } from '@/types';
+import type { Activity, Participant, ScanResponse, PaginatedResponse } from '@/types';
 import QrScanner from '@/components/qr-scanner';
 
 export default function ActivityScanPage() {
@@ -56,9 +56,8 @@ export default function ActivityScanPage() {
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     try {
-      const all = await api.get<Participant[]>('/participants');
-      const q = searchQuery.toLowerCase();
-      setSearchResults((Array.isArray(all) ? all : []).filter((p) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) || p.documentNumber?.toLowerCase().includes(q) || p.registrationCode.toLowerCase().includes(q)).slice(0, 10));
+      const response = await api.get<PaginatedResponse<Participant>>(`/participants?search=${encodeURIComponent(searchQuery)}&limit=20`);
+      setSearchResults(response.data || []);
     } catch { setSearchResults([]); }
   };
 

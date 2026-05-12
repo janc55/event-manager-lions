@@ -41,6 +41,21 @@ export enum DeliveryType {
   KIT = 'kit',
 }
 
+export enum SortOrder {
+  ASC = 'ASC',
+  DESC = 'DESC',
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    lastPage: number;
+    limit: number;
+  };
+}
+
 export interface User {
   id: string;
   fullName: string;
@@ -257,6 +272,7 @@ export interface ReportFilters {
   fromDate?: string;
   toDate?: string;
   search?: string;
+  activityId?: string;
 }
 
 export interface ReportSummary {

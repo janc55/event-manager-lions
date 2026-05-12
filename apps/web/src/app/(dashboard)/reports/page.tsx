@@ -9,7 +9,8 @@ import type {
   PaymentsReportResponse, 
   AttendanceReportResponse,
   DeliveriesReportResponse,
-  DashboardReportResponse
+  DashboardReportResponse,
+  Activity
 } from '@/types';
 import { formatDate, formatMoney } from '@/lib/utils';
 
@@ -52,6 +53,11 @@ export default function ReportsPage() {
   const [payments, setPayments] = useState<PaymentsReportResponse | null>(null);
   const [attendance, setAttendance] = useState<AttendanceReportResponse | null>(null);
   const [deliveries, setDeliveries] = useState<DeliveriesReportResponse | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    api.get<Activity[]>('/activities').then(setActivities).catch(console.error);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,6 +73,7 @@ export default function ReportsPage() {
       if (filters.fromDate) queryParams.set('fromDate', filters.fromDate);
       if (filters.toDate) queryParams.set('toDate', filters.toDate);
       if (filters.search) queryParams.set('search', filters.search);
+      if (filters.activityId) queryParams.set('activityId', filters.activityId);
       
       const query = queryParams.toString();
       const suffix = query ? `?${query}` : '';
@@ -120,6 +127,7 @@ export default function ReportsPage() {
     if (filters.fromDate) queryParams.set('fromDate', filters.fromDate);
     if (filters.toDate) queryParams.set('toDate', filters.toDate);
     if (filters.search) queryParams.set('search', filters.search);
+    if (filters.activityId) queryParams.set('activityId', filters.activityId);
     
     const query = queryParams.toString();
     const suffix = query ? `?${query}` : '';
@@ -728,8 +736,25 @@ export default function ReportsPage() {
                 style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', color: 'white' }}
               />
             </div>
+            {tab === 'attendance' && (
+              <div>
+                <label className="block text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>Actividad</label>
+                <select
+                  value={filters.activityId || ''}
+                  onChange={(e) => setFilters({ ...filters, activityId: e.target.value || undefined })}
+                  className="w-full px-3 py-2 rounded-lg text-sm appearance-none outline-none"
+                  style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', color: 'white' }}
+                >
+                  <option value="">Todas las actividades</option>
+                  <option value="general">General (Sin actividad)</option>
+                  {activities.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
-          {(filters.country || filters.district || filters.club || filters.participantType || filters.status || filters.paymentStatus || filters.fromDate || filters.toDate) && (
+          {(filters.country || filters.district || filters.club || filters.participantType || filters.status || filters.paymentStatus || filters.fromDate || filters.toDate || filters.activityId) && (
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setFilters({})}

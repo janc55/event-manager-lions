@@ -239,6 +239,9 @@ export class ReportsService {
     if (filters?.toDate) {
       qb.andWhere('att.scannedAt <= :toDate', { toDate: new Date(filters.toDate) });
     }
+    if (filters?.activityId) {
+      qb.andWhere('att.activityId = :activityId', { activityId: filters.activityId });
+    }
 
     const items = await qb.getMany();
 
@@ -272,6 +275,9 @@ export class ReportsService {
     }
     if (filters?.toDate) {
       qb.andWhere('att.scannedAt <= :toDate', { toDate: new Date(filters.toDate) });
+    }
+    if (filters?.activityId) {
+      qb.andWhere('att.activityId = :activityId', { activityId: filters.activityId });
     }
 
     const total = await qb.getCount();
@@ -395,6 +401,7 @@ export class ReportsService {
       'Tipo',
       'Estado',
       'Numero Leon',
+      'Informacion Adicional',
       'Fecha Registro'
     ];
 
@@ -412,6 +419,7 @@ export class ReportsService {
       p.participantType,
       p.status,
       p.lionNumber || '',
+      p.specialRequirements || '',
       p.createdAt.toISOString()
     ]);
 
@@ -529,6 +537,7 @@ export class ReportsService {
       { header: 'Tipo', key: 'participantType', width: 15 },
       { header: 'Estado', key: 'status', width: 15 },
       { header: 'Numero Leon', key: 'lionNumber', width: 15 },
+      { header: 'Informacion Adicional', key: 'specialRequirements', width: 30 },
       { header: 'Fecha Registro', key: 'createdAt', width: 20 },
     ];
 
@@ -546,6 +555,7 @@ export class ReportsService {
       participantType: p.participantType,
       status: p.status,
       lionNumber: p.lionNumber || '',
+      specialRequirements: p.specialRequirements || '',
       createdAt: p.createdAt,
     })));
 
